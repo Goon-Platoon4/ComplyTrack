@@ -1,0 +1,38 @@
+name: ComplyTrack CodeQL
+
+on:
+  push:
+    branches:
+      - Develop
+      - main
+
+  pull_request:
+    branches:
+      - Develop
+      - main
+
+  schedule:
+    - cron: '30 2 * * 1'
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4

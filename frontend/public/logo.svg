@@ -1,0 +1,13 @@
+<svg width="520" height="120" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="32" fill="#0d1b2a"/>
+  <path d="M60 18 94 30v25c0 23-14 38-34 47C40 93 26 78 26 55V30l34-12Z" fill="none" stroke="url(#g)" stroke-width="8"/>
+  <path d="m43 59 11 11 24-27" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="145" y="78" font-family="Inter,Arial,sans-serif" font-size="54" font-weight="800" fill="#0d1b2a">Comply</text>
+  <text x="355" y="78" font-family="Inter,Arial,sans-serif" font-size="54" font-weight="800" fill="#14b8a6">Track</text>
+</svg>
