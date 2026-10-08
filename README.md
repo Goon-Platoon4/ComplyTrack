@@ -1,6 +1,7 @@
 # ComplyTrack
 
 A modern SaaS web application for contractor compliance document tracking for small organisations in South Africa.
+ComplyTrack is currently under active development.
 
 ## Stack
 
