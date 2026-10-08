@@ -1,3 +1,4 @@
+//  This is the dashboard page
 import {
   AlertTriangle,
   CheckCircle2,
