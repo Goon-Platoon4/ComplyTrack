@@ -3,12 +3,12 @@ name: ComplyTrack CodeQL
 on:
   push:
     branches:
-      - Develop
+      - develop
       - main
 
   pull_request:
     branches:
-      - Develop
+      - develop
       - main
 
   schedule:

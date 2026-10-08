@@ -3,12 +3,12 @@ name: ComplyTrack CI
 on:
   pull_request:
     branches:
-      - Develop
+      - develop
       - main
 
   push:
     branches:
-      - Develop
+      - develop
       - main
 
 permissions:
