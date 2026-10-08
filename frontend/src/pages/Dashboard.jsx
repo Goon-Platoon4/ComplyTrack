@@ -1,4 +1,4 @@
-//  This is the dashboard page
+// This is the develop branch
 import {
   AlertTriangle,
   CheckCircle2,
