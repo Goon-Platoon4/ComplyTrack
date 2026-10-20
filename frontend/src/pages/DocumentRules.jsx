@@ -88,3 +88,88 @@ export default function DocumentRules() {
       return matchesSearch && matchesFilter;
     });
   }, [rules, search, filter]);
+
+  function openNewRule() {
+    setEditingId(null);
+    setForm({
+      name: "",
+      category: "",
+      required: true,
+      expiryTracked: true,
+      reminderDays: 30,
+    });
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function openEditRule(rule) {
+    setEditingId(rule.id);
+    setForm({
+      name: rule.name,
+      category: rule.category,
+      required: rule.required,
+      expiryTracked: rule.expiryTracked,
+      reminderDays: rule.reminderDays,
+    });
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function saveRule(event) {
+    event.preventDefault();
+
+    const name = form.name.trim();
+    const category = form.category.trim();
+    const reminderDays = Number(form.reminderDays);
+
+    if (!name || !category) {
+      setMessage("Enter a document name and category.");
+      return;
+    }
+
+    if (
+      form.expiryTracked &&
+      (!Number.isInteger(reminderDays) || reminderDays < 1)
+    ) {
+      setMessage("Enter a reminder period of at least 1 day.");
+      return;
+    }
+
+    if (
+      rules.some(
+        (rule) =>
+          rule.name.toLowerCase() === name.toLowerCase() &&
+          rule.id !== editingId
+      )
+    ) {
+      setMessage("A rule with this document name already exists.");
+      return;
+    }
+
+    if (editingId !== null) {
+      setRules((current) =>
+        current.map((rule) =>
+          rule.id === editingId
+            ? {
+                ...rule,
+                ...form,
+                name,
+                category,
+                reminderDays: form.expiryTracked ? reminderDays : 0,
+              }
+            : rule
+        )
+      );
+    } else {
+      setRules((current) => [
+        ...current,
+        {
+          id: Math.max(0, ...current.map((rule) => rule.id)) + 1,
+          ...form,
+          name,
+          category,
+          reminderDays: form.expiryTracked ? reminderDays : 0,
+          active: true,
+        },
+      ]);
+    }
