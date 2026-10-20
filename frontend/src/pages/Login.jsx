@@ -16,12 +16,14 @@ export default function Login() {
         </div>
 
         <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="border-b border-slate-200 bg-slate-950 p-7 text-white sm:p-10 lg:border-b-0 lg:border-r">
+        <section className="border-b border-slate-200 bg-slate-950 p-7 text-white sm:p-10 lg:border-b-0 lg:border-r">
             <div className="mb-14 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-lg border border-teal-400/30 bg-teal-400/10 text-teal-300">
-                <ShieldCheck size={22} />
-              </div>
-              <span className="text-sm font-extrabold tracking-[0.12em]">COMPLYTRACK</span>
+              <img 
+                src="/logo.webp" 
+                alt="ComplyTrack" 
+                className="h-16 w-auto object-contain" 
+                style={{ mixBlendMode: 'screen' }} 
+              />
             </div>
 
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-300">Login experience</span>

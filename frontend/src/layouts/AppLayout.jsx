@@ -19,8 +19,8 @@ export default function AppLayout() {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
-        <div className="brand">
-          <img src="/logo.svg" alt="ComplyTrack" />
+           <div className="brand">
+          <img src="/logo.webp" alt="ComplyTrack" />
         </div>
 
         <nav className="sidebar-nav">
