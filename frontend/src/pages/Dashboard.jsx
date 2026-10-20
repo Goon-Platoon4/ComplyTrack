@@ -1,4 +1,4 @@
-// This is the develop branch
+
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,77 +7,116 @@ import {
   Plus,
   ArrowUpRight,
   BellRing,
+  Activity,
+  FileCheck2,
+  CircleHelp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
-import { attentionItems, contractors } from "../data/demoData";
 
 export default function Dashboard() {
-  const compliant = 18,
-    expiring = 4,
-    expired = 3,
-    missing = 2;
-
   return (
-    <section className="page">
+    <section className="page dashboard-blueprint">
+      {/* ==================================================
+          1. PAGE HEADER
+          Developer: connect the date to the current date.
+          Add contractor should open the contractor workflow.
+         ================================================== */}
       <PageHeader
-        eyebrow="Wednesday · 7 October 2026"
+        eyebrow="DASHBOARD BLUEPRINT · IMPLEMENTATION REQUIRED"
         title="Compliance overview"
-        description="A live-style view of contractor compliance across your organisation."
+        description="A central overview of contractor compliance across the organisation."
         actions={
           <Link to="/contractors" className="primary-button">
-            <Plus size={17} /> Add contractor
+            <Plus size={17} />
+            Add contractor
           </Link>
         }
       />
 
+      {/* ==================================================
+          2. COMPLIANCE SUMMARY CARDS
+          Developer: replace placeholders with API data.
+          Each card should link to a relevant filtered view.
+         ================================================== */}
       <div className="stats-grid">
         <StatCard
           label="Compliant"
-          value={compliant}
-          helper="contractors with every required document valid"
+          value="—"
+          helper="Contractors with all required documents valid"
           status="good"
           icon={CheckCircle2}
-          trend="↑ 12% vs last month"
+          trend="Implementation required"
         />
+
         <StatCard
           label="Expiring soon"
-          value={expiring}
-          helper="have a document expiring within 30 days"
+          value="—"
+          helper="Contractors with documents expiring within 30 days"
           status="warning"
           icon={Clock3}
-          trend="↑ 2 require attention"
+          trend="Connect expiry calculations"
         />
+
         <StatCard
           label="Expired"
-          value={expired}
-          helper="are working with an expired document"
+          value="—"
+          helper="Contractors with expired required documents"
           status="danger"
           icon={AlertTriangle}
-          trend="↑ 1 since yesterday"
+          trend="Connect expiry calculations"
         />
+
         <StatCard
           label="Missing"
-          value={missing}
-          helper="have not uploaded a required document"
+          value="—"
+          helper="Contractors missing required documents"
           status="neutral"
           icon={FileWarning}
+          trend="Connect missing-document checks"
         />
       </div>
 
       <div className="dashboard-grid">
-        <div className="panel panel-wide">
+        {/* ==================================================
+            3. NEEDS ATTENTION
+            Developer:
+            - Load actual contractor and document records.
+            - Show expired, expiring and missing requirements.
+            - Link each row to the correct contractor.
+            - Do not hardcode contractor IDs.
+           ================================================== */}
+        <div className="panel panel-wide blueprint-panel">
           <div className="panel-header">
             <div>
-              <h2>Needs attention</h2>
-              <p>Items that may affect contractor compliance.</p>
+              <h2>
+                <AlertTriangle size={18} />
+                Needs attention
+              </h2>
+              <p>
+                Contractors and documents that require follow-up.
+              </p>
             </div>
+
             <Link to="/reports" className="link-button">
               View full report <ArrowUpRight size={15} />
             </Link>
           </div>
+
+          <div className="blueprint-placeholder">
+            <FileWarning size={30} />
+            <strong>Contractor compliance table</strong>
+            <span>
+              Implement the table using live backend data.
+            </span>
+            <span>
+              Required columns: Contractor, Document, Expiry,
+              Status and Action.
+            </span>
+          </div>
+
           <div className="table-wrap">
             <table>
               <thead>
@@ -90,130 +129,184 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {attentionItems.map((item) => (
-                  <tr key={`${item.contractor}-${item.document}`}>
-                    <td>
-                      <strong>{item.contractor}</strong>
-                    </td>
-                    <td>{item.document}</td>
-                    <td>{item.expiry}</td>
-                    <td>
-                      <StatusBadge status={item.status} />
-                    </td>
-                    <td>
-                      <Link className="table-action" to="/contractors/1">
-                        {item.action}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                <tr>
+                  <td colSpan={5} className="blueprint-table-note">
+                    Developer: render one row per outstanding
+                    compliance issue. Include a loading state,
+                    an empty state and an error state.
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Compliance trend</h2>
-              <p>Last 6 months</p>
-            </div>
-          </div>
-          <div className="mini-chart">
-            {[58, 64, 69, 72, 70, 78].map((h, i) => (
-              <div className="chart-col" key={i}>
-                <div className="bar" style={{ height: `${h}%` }} />
-                <span>{["May", "Jun", "Jul", "Aug", "Sep", "Oct"][i]}</span>
-              </div>
-            ))}
-          </div>
-          <div className="legend">
-            <span>
-              <i className="dot good" /> Compliant
-            </span>
-            <span>
-              <i className="dot warning" /> Expiring
-            </span>
-            <span>
-              <i className="dot danger" /> Expired
-            </span>
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Document coverage</h2>
-              <p>Required documents currently valid</p>
-            </div>
-          </div>
-          <div className="coverage-list">
-            {[
-              ["Tax Compliance Status PIN", "25 / 27", 93],
-              ["COIDA Letter of Good Standing", "22 / 27", 81],
-              ["B-BBEE certificate / affidavit", "24 / 27", 89],
-              ["Public liability insurance", "23 / 27", 85],
-              ["OHS Act s37(2) agreement", "18 / 19", 95],
-            ].map(([name, count, pct]) => (
-              <div className="coverage-row" key={name}>
-                <div>
-                  <span>{name}</span>
-                  <strong>{count}</strong>
-                </div>
-                <div className="progress">
-                  <span style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel panel-wide">
-          <div className="panel-header">
-            <div>
-              <h2>Recently updated</h2>
-              <p>Latest compliance activity</p>
-            </div>
-            <Link to="/contractors" className="link-button">
-              View contractors
-            </Link>
-          </div>
-          <div className="activity-list">
-            {contractors.slice(0, 5).map((c, i) => (
-              <div className="activity-row" key={c.id}>
-                <div className="activity-avatar">
-                  {c.name
-                    .split(" ")
-                    .map((x) => x[0])
-                    .slice(0, 2)
-                    .join("")}
-                </div>
-                <div>
-                  <strong>{c.name}</strong>
-                  <span>
-                    {c.category} · record updated {i + 1} hour
-                    {i === 0 ? "" : "s"} ago
-                  </span>
-                </div>
-                <StatusBadge status={c.status} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel">
+        {/* ==================================================
+            4. COMPLIANCE TREND
+            Developer: use historical database data.
+            Do not use fabricated production statistics.
+           ================================================== */}
+        <div className="panel blueprint-panel">
           <div className="panel-header">
             <div>
               <h2>
-                <BellRing size={18} /> Reminders
+                <Activity size={18} />
+                Compliance trend
               </h2>
-              <p>Automated workflow status</p>
+              <p>Compliance performance over the last six months.</p>
             </div>
           </div>
-          <div className="reminder-box">
-            <strong>4 reminders scheduled</strong>
-            <span>30, 14 and 7-day expiry reminders are enabled.</span>
-            <button className="secondary-button">Configure reminders</button>
+
+          <div className="blueprint-placeholder">
+            <Activity size={30} />
+            <strong>Historical compliance chart</strong>
+            <span>
+              Missing: historical data source and chart implementation.
+            </span>
+            <span>
+              Display monthly compliance percentages when available.
+            </span>
+          </div>
+
+          <div className="blueprint-requirements">
+            <strong>Developer requirements</strong>
+            <ul>
+              <li>Retrieve historical compliance data.</li>
+              <li>Display monthly changes.</li>
+              <li>Show a useful empty state if history is unavailable.</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* ==================================================
+            5. DOCUMENT COVERAGE
+            Developer: calculate coverage per document type.
+           ================================================== */}
+        <div className="panel blueprint-panel">
+          <div className="panel-header">
+            <div>
+              <h2>
+                <FileCheck2 size={18} />
+                Document coverage
+              </h2>
+              <p>Required documents currently valid.</p>
+            </div>
+          </div>
+
+          <div className="blueprint-placeholder">
+            <FileCheck2 size={30} />
+            <strong>Document coverage breakdown</strong>
+            <span>
+              Missing: live counts, coverage percentages and progress bars.
+            </span>
+            <span>
+              Group records by the configured document rules.
+            </span>
+          </div>
+
+          <div className="blueprint-requirements">
+            <strong>Each coverage row must include</strong>
+            <ul>
+              <li>Document type</li>
+              <li>Number of applicable contractors</li>
+              <li>Number with valid documents</li>
+              <li>Calculated coverage percentage</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* ==================================================
+            6. RECENT ACTIVITY
+            Developer: connect to real activity/audit records.
+           ================================================== */}
+        <div className="panel panel-wide blueprint-panel">
+          <div className="panel-header">
+            <div>
+              <h2>
+                <Activity size={18} />
+                Recently updated
+              </h2>
+              <p>Latest contractor and document activity.</p>
+            </div>
+
+            <Link to="/audit-log" className="link-button">
+              View audit log <ArrowUpRight size={15} />
+            </Link>
+          </div>
+
+          <div className="blueprint-placeholder">
+            <Activity size={30} />
+            <strong>Recent activity list</strong>
+            <span>
+              Missing: activity API integration and timestamps.
+            </span>
+            <span>
+              Show who changed what, which record was affected
+              and when the action occurred.
+            </span>
+          </div>
+        </div>
+
+        {/* ==================================================
+            7. REMINDERS
+            Developer: connect to reminder configuration and
+            actual scheduled/sent reminder records.
+           ================================================== */}
+        <div className="panel blueprint-panel">
+          <div className="panel-header">
+            <div>
+              <h2>
+                <BellRing size={18} />
+                Reminders
+              </h2>
+              <p>Document expiry reminder status.</p>
+            </div>
+          </div>
+
+          <div className="blueprint-placeholder">
+            <BellRing size={30} />
+            <strong>Reminder status</strong>
+            <span>
+              Missing: reminder scheduling and delivery integration.
+            </span>
+            <span>
+              Display actual pending, sent and failed reminders.
+            </span>
+          </div>
+
+          <Link to="/settings" className="secondary-button">
+            Configure reminders
+          </Link>
+        </div>
+
+        {/* ==================================================
+            8. IMPLEMENTATION CHECKLIST
+            Remove this panel when implementation is complete.
+           ================================================== */}
+        <div className="panel panel-wide blueprint-panel">
+          <div className="panel-header">
+            <div>
+              <h2>
+                <CircleHelp size={18} />
+                Dashboard implementation checklist
+              </h2>
+              <p>
+                Guidance for the developer assigned to this page.
+              </p>
+            </div>
+            <StatusBadge status="warning" />
+          </div>
+
+          <div className="blueprint-requirements">
+            <ul>
+              <li>Connect the dashboard to the existing API service.</li>
+              <li>Replace placeholder values with database-backed results.</li>
+              <li>Use consistent compliance rules across all pages.</li>
+              <li>Connect actions to the correct contractor and document.</li>
+              <li>Implement loading, error and empty states.</li>
+              <li>Ensure the layout works on desktop and mobile.</li>
+              <li>Remove blueprint labels when the feature is implemented.</li>
+            </ul>
           </div>
         </div>
       </div>
