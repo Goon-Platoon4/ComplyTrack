@@ -56,3 +56,35 @@ const initialRules = [
     active: true,
   },
 ];
+
+export default function DocumentRules() {
+  const [rules, setRules] = useState(initialRules);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [message, setMessage] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    category: "",
+    required: true,
+    expiryTracked: true,
+    reminderDays: 30,
+  });
+
+  const filteredRules = useMemo(() => {
+    return rules.filter((rule) => {
+      const matchesSearch =
+        rule.name.toLowerCase().includes(search.toLowerCase()) ||
+        rule.category.toLowerCase().includes(search.toLowerCase());
+
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "active" && rule.active) ||
+        (filter === "inactive" && !rule.active) ||
+        (filter === "required" && rule.required);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [rules, search, filter]);
