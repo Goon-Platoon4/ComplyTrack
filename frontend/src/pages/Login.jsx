@@ -16,7 +16,7 @@ export default function Login() {
         </div>
 
         <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="border-b border-slate-200 bg-slate-950 p-7 text-white sm:p-10 lg:border-b-0 lg:border-r">
+        <section className="border-b border-slate-200 bg-[var(--navy)] p-7 text-white sm:p-10 lg:border-b-0 lg:border-r">
             <div className="mb-14 flex items-center gap-3">
               <img 
                 src="/logo.webp" 
@@ -26,8 +26,8 @@ export default function Login() {
               />
             </div>
 
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-300">Login experience</span>
-            <h1 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--teal-2)]">Login experience</span>
+            <h1 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight sm:text-4xl text-[var(--teal-2)]">
               Secure access to the contractor compliance workspace.
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
@@ -67,7 +67,7 @@ export default function Login() {
                 <span className="font-semibold text-teal-700">Forgot password?</span>
               </div>
 
-              <button type="button" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800">
+              <button type="button" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--navy)] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90">
                 Sign in <ArrowRight size={17} />
               </button>
 

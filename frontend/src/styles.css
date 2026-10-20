@@ -2,10 +2,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --navy: #0d1b2a;
-  --teal: #0f766e;
-  --teal-2: #14b8a6;
-  --bg: #f4f7f9;
+  --navy: #0A4531; /* British Racing Green (Sidebar) */
+  --teal: #0A4531; /* British Racing Green (Buttons, chart bars) */
+  --teal-2: #DA9928; /* Golden Rod (Active borders, highlights) */
+  --bg: #F8FAFC; 
   --text: #182635;
   --muted: #687788;
   --border: #dce4ea;
@@ -114,9 +114,9 @@ a {
 }
 
 .nav-link.active {
-  background: #203548;
+  background: rgba(255, 255, 255, 0.1); /* Slight white tint */
   color: #fff;
-  box-shadow: inset 3px 0 0 var(--teal-2);
+  box-shadow: inset 4px 0 0 var(--teal-2); /* This uses the Gold color */
 }
 
 .nav-link.disabled {
@@ -823,17 +823,16 @@ td strong {
   }
 }
 
-@media (max-width: 480px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 780px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: 0.2s;
   }
-
-  .page-actions {
-    width: 100%;
-    flex-wrap: wrap;
+  .sidebar.sidebar-open {
+    transform: translateX(0);
   }
-
-  .page-actions > * {
-    flex: 1;
+  .mobile-menu {
+    display: block;
+    margin-right: 12px;
   }
 }
