@@ -66,7 +66,7 @@ export default function ContractorDetails() {
             </button>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 px-3"
+              className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
             >
               <MoreHorizontal size={17} />
             </button>
@@ -132,7 +132,7 @@ export default function ContractorDetails() {
       >
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <div className="min-w-[850px]">
-            <div className="grid grid-cols-[1.6fr_0.9fr_1fr_0.9fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+            <div className="grid grid-cols-[1.6fr_0.9fr_1fr_0.9fr_0.8fr] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               <span>Document</span>
               <span>Status</span>
               <span>Expiry</span>
@@ -237,7 +237,7 @@ function BlueprintPanel({ number, title, description, icon: Icon, children }) {
 function Field({ label, value }) {
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
-      <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+      <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {label}
       </span>
       <strong className="mt-1 block text-sm text-slate-700">{value}</strong>

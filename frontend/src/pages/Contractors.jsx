@@ -58,7 +58,7 @@ export default function Contractors() {
       <BlueprintPanel number="04" title="Contractor List" description="The primary contractor management table." icon={MoreHorizontal}>
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <div className="min-w-[1050px]">
-            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_0.8fr_1fr_0.9fr_0.7fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_0.8fr_1fr_0.9fr_0.7fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               <span>Contractor</span><span>Registration</span><span>Contact</span><span>Category</span><span>Documents</span><span>Next Expiry</span><span>Status</span><span>Actions</span>
             </div>
             {rows.map((category, index) => <div key={category} className="grid grid-cols-[1.5fr_1fr_1fr_1fr_0.8fr_1fr_0.9fr_0.7fr] gap-3 border-b border-slate-100 px-4 py-4 text-xs last:border-b-0">
@@ -68,7 +68,7 @@ export default function Contractors() {
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>Pagination: page X of Y</span><div className="flex gap-2"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 px-3 py-2">Previous</button><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 px-3 py-2">Next</button></div>
+          <span>Pagination: page X of Y</span><div className="flex gap-2"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50">Previous</button><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50">Next</button></div>
         </div>
       </BlueprintPanel>
 
