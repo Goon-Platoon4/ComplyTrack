@@ -63,8 +63,9 @@ export default function AppLayout() {
           onClick={closeMenu}
           aria-label="ComplyTrack home"
         >
-          <img src="/logo.svg" alt="ComplyTrack" />
+          <img src="/logo.webp" alt="ComplyTrack" />
         </NavLink>
+        
 
         <nav className="sidebar-nav" aria-label="Main navigation">
           <div className="nav-section-label">Workspace</div>

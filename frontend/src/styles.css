@@ -81,7 +81,7 @@ a {
 .brand img {
   width: 170px;
   height: auto;
-  filter: brightness(0) invert(1);
+  mix-blend-mode: screen; /* This hides the black background instead of turning it white */
 }
 
 .sidebar-nav {
