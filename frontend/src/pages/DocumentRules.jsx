@@ -173,3 +173,15 @@ export default function DocumentRules() {
         },
       ]);
     }
+
+    setShowForm(false);
+    setMessage("");
+  }
+
+  function toggleRule(id) {
+    setRules((current) =>
+      current.map((rule) =>
+        rule.id === id ? { ...rule, active: !rule.active } : rule
+      )
+    );
+  }
