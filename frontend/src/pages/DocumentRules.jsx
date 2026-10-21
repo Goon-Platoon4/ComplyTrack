@@ -561,4 +561,127 @@ export default function DocumentRules() {
     setCategoryFilter("all");
   }
 
+ return (
+    <section className="min-w-0 space-y-6 pb-8">
+      <PageHeader
+        eyebrow="Administration"
+        title="Document rules"
+        description="Define the documents contractors must provide and how expiry warnings are handled."
+        actions={
+          <button
+            type="button"
+            onClick={openNewRule}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
+          >
+            <Plus size={17} />
+            Add document rule
+          </button>
+        }
+      />
 
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
+      </div>
+
+      {/* Feedback messages */}
+      {message && !showForm && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+        >
+          <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{message}</span>
+          <button
+            type="button"
+            onClick={() => setMessage("")}
+            aria-label="Dismiss message"
+            className="rounded p-1 hover:bg-emerald-100"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Add and edit form */}
+      {showForm && (
+        <RuleForm
+          form={form}
+          setForm={setForm}
+          editingId={editingId}
+          onSave={saveRule}
+          onCancel={closeForm}
+          error={error}
+        />
+      )}
+
+      {/* Main rule management table */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              Configured requirements
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Search, filter, edit and manage your document rules.
+            </p>
+          </div>
+
+          <span className="w-fit rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+            {filteredRules.length} of {rules.length} rules
+          </span>
+        </div>
+
+        {/* Search and filters */}
+        <div className="grid grid-cols-1 gap-3 border-b border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_180px_200px_auto]">
+          <label className="relative block">
+            <Search
+              size={17}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name or category..."
+              aria-label="Search document rules"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+            />
+          </label>
+
+          <select
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            aria-label="Filter by rule status"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="required">Required</option>
+          </select>
+
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            aria-label="Filter by category"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+          >
+            <option value="all">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+          >
+            <RotateCcw size={15} />
+            Reset
+          </button>
+        </div>
