@@ -114,27 +114,26 @@ export default function Contractors() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-white min-h-screen text-gray-900 font-sans">
       {/* Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-3">
-        <span className="font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Blueprint • Contractor Management</span>
+      <div className="flex items-center justify-between text-xs text-gray-500 border-b border-gray-200 pb-3">
+        <span className="font-semibold uppercase tracking-wider text-[#007A5A]">Blueprint • Contractor Management</span>
         <button onClick={() => window.history.back()} className="hover:underline">Back to Dashboard</button>
       </div>
 
       {/* 01. Contractors Header */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">01</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="w-7 h-7 text-[#007A5A]"/>
             Contractors
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 mt-1">
             Manage contractor profiles, compliance records, documents and contract information.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium px-4 py-2 rounded-xl transition text-sm">
+          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 bg-[#007A5A] hover:bg-[#006449] text-white font-medium px-4 py-2 rounded-lg transition text-sm shadow-sm">
             <Download className="w-4 h-4" />
             Export
           </button>
@@ -149,39 +148,38 @@ export default function Contractors() {
       </div>
 
       {/* 02. Contractor Overview Metrics */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">02</div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Contractor Overview</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">High-level information about the organisation's contractor population.</p>
+            <h2 className="text-lg font-bold text-gray-900">Contractor Overview</h2>
+            <p className="text-xs text-gray-500">High-level information about the organisation's contractor population.</p>
           </div>
           <Printer className="w-5 h-5 text-gray-400" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Total Contractors</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{mockContractors.length}</p>
+            <p className="text-2xl font-extrabold text-gray-900 mt-1">{mockContractors.length}</p>
             <p className="text-xs text-gray-500 mt-1">Active contractor records</p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold tracking-wider">Compliant</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Compliant</p>
+            <p className="text-2xl font-extrabold text-gray-900 mt-1">
               {mockContractors.filter(c => c.status === 'Compliant').length}
             </p>
             <p className="text-xs text-gray-500 mt-1">Fully compliant contractors</p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-            <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-bold tracking-wider">Expiring Soon</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-[10px] text-amber-600 uppercase font-bold tracking-wider">Expiring Soon</p>
+            <p className="text-2xl font-extrabold text-gray-900 mt-1">
               {mockContractors.filter(c => c.status === 'Expiring Soon').length}
             </p>
             <p className="text-xs text-gray-500 mt-1">Require attention</p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-            <p className="text-[10px] text-rose-600 dark:text-rose-400 uppercase font-bold tracking-wider">Non-Compliant</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-[10px] text-rose-600 uppercase font-bold tracking-wider">Non-Compliant</p>
+            <p className="text-2xl font-extrabold text-gray-900 mt-1">
               {mockContractors.filter(c => c.status === 'Expired').length}
             </p>
             <p className="text-xs text-gray-500 mt-1">Expired or missing documents</p>
@@ -190,11 +188,10 @@ export default function Contractors() {
       </div>
 
       {/* 03. Search & Filters */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 shadow-sm space-y-4">
         <div>
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">03</div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Search & Filters</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Allow users to quickly find contractors and narrow the results by compliance criteria.</p>
+          <h2 className="text-lg font-bold text-gray-900">Search & Filters</h2>
+          <p className="text-xs text-gray-500">Allow users to quickly find contractors and narrow the results by compliance criteria.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
@@ -205,14 +202,14 @@ export default function Contractors() {
               placeholder="Search contractor name, registration number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
+              className="w-full pl-9 pr-4 py-2.5 text-xs border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#007A5A] outline-none"
             />
           </div>
           <div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
+              className="w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-[#007A5A] outline-none"
             >
               <option value="All">All statuses</option>
               <option value="Compliant">Compliant</option>
@@ -224,7 +221,7 @@ export default function Contractors() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none"
+              className="w-full px-3 py-2.5 text-xs border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-[#007A5A] outline-none"
             >
               <option value="All">All service categories</option>
               <option value="Construction">Construction</option>
@@ -236,16 +233,15 @@ export default function Contractors() {
       </div>
 
       {/* 04. Contractor List Table */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-2xl border border-dashed border-gray-300 shadow-sm space-y-4">
         <div>
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">04</div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Contractor List</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400">The primary contractor management table.</p>
+          <h2 className="text-lg font-bold text-gray-900">Contractor List</h2>
+          <p className="text-xs text-gray-500">The primary contractor management table.</p>
         </div>
 
-        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
-          <table className="w-full text-left text-xs text-gray-600 dark:text-gray-300">
-            <thead className="bg-gray-50 dark:bg-gray-900 text-[10px] text-gray-400 uppercase font-bold tracking-wider border-b border-gray-200 dark:border-gray-700">
+        <div className="overflow-x-auto border border-gray-200 rounded-xl">
+          <table className="w-full text-left text-xs text-gray-700">
+            <thead className="bg-gray-50 text-[10px] text-gray-500 uppercase font-bold tracking-wider border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3.5">Contractor</th>
                 <th className="px-6 py-3.5">Registration</th>
@@ -257,11 +253,11 @@ export default function Contractors() {
                 <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {filteredContractors.length > 0 ? (
                 filteredContractors.map((contractor) => (
-                  <tr key={contractor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                    <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
+                  <tr key={contractor.id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 font-semibold text-gray-900">
                       {contractor.name}
                     </td>
                     <td className="px-6 py-4 font-mono text-gray-500">{contractor.regNo}</td>
@@ -276,7 +272,7 @@ export default function Contractors() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => setSelectedContractor(contractor)}
-                        className="font-medium text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-1"
+                        className="font-medium text-[#007A5A] hover:underline inline-flex items-center gap-1"
                       >
                         View
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -294,18 +290,6 @@ export default function Contractors() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Development Notes Footer */}
-      <div className="bg-gray-50 dark:bg-gray-900/60 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs text-gray-500 space-y-2">
-        <p className="font-bold text-gray-700 dark:text-gray-300">Development notes</p>
-        <ul className="list-disc pl-4 space-y-1">
-          <li>Add Contractor opens a validated contractor creation form.</li>
-          <li>Search and filters query live state and mock datasets seamlessly.</li>
-          <li>Contractor status is derived from authoritative document compliance data.</li>
-          <li>Rows link directly to the contractor details drawer view.</li>
-          <li>Export uses selected filters and current result set.</li>
-        </ul>
       </div>
 
       {/* Contractor Details Drawer Modal */}
