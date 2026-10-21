@@ -416,9 +416,6 @@ export default function DocumentRules() {
   }, [rules, search, filter, categoryFilter]);
 
 
-
-==================== SECTION 4 (lines 419-563) ====================
-
   function resetForm() {
     setForm({ ...emptyForm });
     setEditingId(null);
@@ -563,3 +560,5 @@ export default function DocumentRules() {
     setFilter("all");
     setCategoryFilter("all");
   }
+
+
