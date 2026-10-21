@@ -685,3 +685,249 @@ export default function DocumentRules() {
             Reset
           </button>
         </div>
+
+  {/* Desktop table */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[850px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-slate-100 bg-white">
+                {[
+                  "Document",
+                  "Category",
+                  "Requirement",
+                  "Expiry tracking",
+                  "Reminder",
+                  "Status",
+                  "Actions",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    className="whitespace-nowrap px-4 py-3.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 first:pl-6 last:pr-6"
+                  >
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100">
+              {filteredRules.map((rule) => (
+                <tr
+                  key={rule.id}
+                  className="transition hover:bg-slate-50/80"
+                >
+                  <td className="max-w-[230px] px-4 py-4 first:pl-6">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                        <FileCheck2 size={17} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-semibold text-slate-800">
+                          {rule.name}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Rule #{rule.id}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-4 text-sm text-slate-600">
+                    {rule.category}
+                  </td>
+
+                  <td className="px-4 py-4">
+                    <RequirementPill required={rule.required} />
+                  </td>
+
+                  <td className="px-4 py-4">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                      {rule.expiryTracked ? (
+                        <CheckCircle2 size={15} className="text-teal-600" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                      )}
+                      {rule.expiryTracked ? "Tracked" : "Not tracked"}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-4 text-sm text-slate-600">
+                    {rule.expiryTracked ? `${rule.reminderDays} days` : "—"}
+                  </td>
+
+                  <td className="px-4 py-4">
+                    <StatusPill active={rule.active} />
+                  </td>
+
+                  <td className="px-4 py-4 last:pr-6">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openEditRule(rule)}
+                        aria-label={`Edit ${rule.name}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
+                      >
+                        <Pencil size={13} />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleRule(rule.id)}
+                        aria-label={`${rule.active ? "Disable" : "Enable"} ${rule.name}`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition ${
+                          rule.active
+                            ? "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        <Power size={13} />
+                        {rule.active ? "Disable" : "Enable"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {filteredRules.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-16 text-center">
+                    <Search
+                      size={25}
+                      className="mx-auto text-slate-300"
+                    />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      No matching document rules
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Try another search term or clear your filters.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-4 text-sm font-semibold text-teal-700 hover:text-teal-900"
+                    >
+                      Clear filters
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile rule cards */}
+        <div className="divide-y divide-slate-100 md:hidden">
+          {filteredRules.map((rule) => (
+            <article key={rule.id} className="space-y-4 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                  <FileCheck2 size={19} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words text-sm font-bold text-slate-900">
+                    {rule.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {rule.category} · Rule #{rule.id}
+                  </p>
+                  <div className="mt-2">
+                    <StatusPill active={rule.active} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+                <div>
+                  <p className="text-[11px] text-slate-500">Requirement</p>
+                  <div className="mt-1">
+                    <RequirementPill required={rule.required} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500">Expiry reminder</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-700">
+                    {rule.expiryTracked
+                      ? `${rule.reminderDays} days`
+                      : "Not tracked"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditRule(rule)}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700"
+                >
+                  <Pencil size={14} />
+                  Edit rule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleRule(rule.id)}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700"
+                >
+                  <Power size={14} />
+                  {rule.active ? "Disable" : "Enable"}
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {filteredRules.length === 0 && (
+            <div className="px-5 py-12 text-center">
+              <FileWarning
+                size={26}
+                className="mx-auto text-slate-300"
+              />
+              <p className="mt-3 text-sm font-semibold text-slate-800">
+                No matching rules
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-2 text-sm font-semibold text-teal-700"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="text-xs text-slate-500">
+            Showing {filteredRules.length} of {rules.length} rules
+          </p>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-900"
+          >
+            Manage organisation settings
+            <ChevronRight size={14} />
+          </Link>
+        </div>
+      </div>
+
+      {/* Help panel */}
+      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+          <AlertCircle size={18} />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-800">
+            How document rules work
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Active rules define the requirements the application should apply
+            when checking contractor documents. Required rules identify
+            mandatory documents, while expiry tracking supports renewal
+            monitoring. The backend must enforce these rules for them to affect
+            actual compliance results.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
