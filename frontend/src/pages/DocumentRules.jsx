@@ -5,9 +5,18 @@ import {
   Search,
   Pencil,
   ShieldCheck,
+  Clock3,
+  FileWarning,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Power,
+  ClipboardList,
+  ChevronRight,
+  RotateCcw,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
-import StatusBadge from "../components/StatusBadge";
 
 const initialRules = [
   {
@@ -52,362 +61,123 @@ const initialRules = [
     category: "Health & Safety",
     required: true,
     expiryTracked: false,
-    reminderDays: 30,
+    reminderDays: 0,
     active: true,
   },
 ];
 
-export default function DocumentRules() {
-  const [rules, setRules] = useState(initialRules);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [message, setMessage] = useState("");
+const categories = [
+  "Tax",
+  "Health & Safety",
+  "Business Compliance",
+  "Insurance",
+  "Company Registration",
+  "Other",
+];
 
-  const [form, setForm] = useState({
-    name: "",
-    category: "",
-    required: true,
-    expiryTracked: true,
-    reminderDays: 30,
-  });
+const emptyForm = {
+  name: "",
+  category: "Tax",
+  required: true,
+  expiryTracked: true,
+  reminderDays: "30",
+};
 
-  const filteredRules = useMemo(() => {
-    return rules.filter((rule) => {
-      const matchesSearch =
-        rule.name.toLowerCase().includes(search.toLowerCase()) ||
-        rule.category.toLowerCase().includes(search.toLowerCase());
+function StatCard({ title, value, description, icon: Icon, color }) {
+  const colors = {
+    teal: "bg-teal-50 text-teal-700 ring-teal-100",
+    blue: "bg-blue-50 text-blue-700 ring-blue-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+    violet: "bg-violet-50 text-violet-700 ring-violet-100",
+  };
 
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "active" && rule.active) ||
-        (filter === "inactive" && !rule.active) ||
-        (filter === "required" && rule.required);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
+            {value}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {description}
+          </p>
+        </div>
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [rules, search, filter]);
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${colors[color]}`}
+        >
+          <Icon size={21} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  function openNewRule() {
-    setEditingId(null);
-    setForm({
-      name: "",
-      category: "",
-      required: true,
-      expiryTracked: true,
-      reminderDays: 30,
-    });
-    setMessage("");
-    setShowForm(true);
-  }
+function StatusPill({ active }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+        active
+          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+          : "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          active ? "bg-emerald-500" : "bg-slate-400"
+        }`}
+      />
+      {active ? "Active" : "Inactive"}
+    </span>
+  );
+}
 
-  function openEditRule(rule) {
-    setEditingId(rule.id);
-    setForm({
-      name: rule.name,
-      category: rule.category,
-      required: rule.required,
-      expiryTracked: rule.expiryTracked,
-      reminderDays: rule.reminderDays,
-    });
-    setMessage("");
-    setShowForm(true);
-  }
+function RequirementPill({ required }) {
+  return (
+    <span
+      className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-medium ${
+        required
+          ? "bg-blue-50 text-blue-700"
+          : "bg-slate-100 text-slate-600"
+      }`}
+    >
+      {required ? "Required" : "Optional"}
+    </span>
+  );
+}
 
-  function saveRule(event) {
-    event.preventDefault();
+function Toggle({ checked, onChange, title, description }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 py-3">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-slate-800">
+          {title}
+        </span>
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
+      </span>
 
-    const name = form.name.trim();
-    const category = form.category.trim();
-    const reminderDays = Number(form.reminderDays);
-
-    if (!name || !category) {
-      setMessage("Enter a document name and category.");
-      return;
-    }
-
-    if (
-      form.expiryTracked &&
-      (!Number.isInteger(reminderDays) || reminderDays < 1)
-    ) {
-      setMessage("Enter a reminder period of at least 1 day.");
-      return;
-    }
-
-    if (
-      rules.some(
-        (rule) =>
-          rule.name.toLowerCase() === name.toLowerCase() &&
-          rule.id !== editingId
-      )
-    ) {
-      setMessage("A rule with this document name already exists.");
-      return;
-    }
-
-    if (editingId !== null) {
-      setRules((current) =>
-        current.map((rule) =>
-          rule.id === editingId
-            ? {
-                ...rule,
-                ...form,
-                name,
-                category,
-                reminderDays: form.expiryTracked ? reminderDays : 0,
-              }
-            : rule
-        )
-      );
-    } else {
-      setRules((current) => [
-        ...current,
-        {
-          id: Math.max(0, ...current.map((rule) => rule.id)) + 1,
-          ...form,
-          name,
-          category,
-          reminderDays: form.expiryTracked ? reminderDays : 0,
-          active: true,
-        },
-      ]);
-    }
-
-    setShowForm(false);
-    setMessage("");
-  }
-
-  function toggleRule(id) {
-    setRules((current) =>
-      current.map((rule) =>
-        rule.id === id ? { ...rule, active: !rule.active } : rule
-      )
-    );
-  }
-
-   return (
-    <section className="page">
-      <PageHeader
-        eyebrow="Administration"
-        title="Document rules"
-        description="Define the documents contractors must provide and how expiry warnings are handled."
-        actions={
-          <button className="primary-button" onClick={openNewRule}>
-            <Plus size={17} /> Add document rule
-          </button>
-        }
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="peer sr-only"
       />
 
-      <div className="stats-grid">
-        <div className="panel">
-          <FileCheck2 size={20} />
-          <p>Total rules</p>
-          <h2>{rules.length}</h2>
-        </div>
-        <div className="panel">
-          <ShieldCheck size={20} />
-          <p>Active rules</p>
-          <h2>{rules.filter((rule) => rule.active).length}</h2>
-        </div>
-        <div className="panel">
-          <FileCheck2 size={20} />
-          <p>Required rules</p>
-          <h2>
-            {rules.filter((rule) => rule.active && rule.required).length}
-          </h2>
-        </div>
-      </div>
-
-      {message && !showForm && (
-        <div className="panel" role="status">
-          {message}
-        </div>
-      )}
-
-      {showForm && (
-        <form className="panel" onSubmit={saveRule}>
-          <div className="panel-header">
-            <div>
-              <h2>{editingId === null ? "Add document rule" : "Edit document rule"}</h2>
-              <p>Complete the requirement details below.</p>
-            </div>
-          </div>
-
-          {message && <p role="alert">{message}</p>}
-
-          <div className="rule-form-grid">
-            <label>
-              Document name
-              <input
-                value={form.name}
-                onChange={(event) =>
-                  setForm({ ...form, name: event.target.value })
-                }
-                placeholder="e.g. Professional indemnity insurance"
-                required
-              />
-            </label>
-
-            <label>
-              Category
-              <input
-                value={form.category}
-                onChange={(event) =>
-                  setForm({ ...form, category: event.target.value })
-                }
-                placeholder="e.g. Insurance"
-                required
-              />
-            </label>
-
-            <label>
-              Expiry reminder (days before expiry)
-              <input
-                type="number"
-                min="1"
-                disabled={!form.expiryTracked}
-                value={form.reminderDays}
-                onChange={(event) =>
-                  setForm({ ...form, reminderDays: event.target.value })
-                }
-              />
-            </label>
-          </div>
-
-          <div className="rule-checkboxes">
-            <label>
-              <input
-                type="checkbox"
-                checked={form.required}
-                onChange={(event) =>
-                  setForm({ ...form, required: event.target.checked })
-                }
-              />
-              Required document
-            </label>
-
-            <label>
-              <input
-                type="checkbox"
-                checked={form.expiryTracked}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    expiryTracked: event.target.checked,
-                  })
-                }
-              />
-              Track expiry date
-            </label>
-          </div>
-
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
-              Save rule
-            </button>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                setMessage("");
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Configured requirements</h2>
-            <p>Search, edit and enable or disable document rules.</p>
-          </div>
-        </div>
-
-        <div className="table-toolbar">
-          <label className="search-box">
-            <Search size={17} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search document rules..."
-              aria-label="Search document rules"
-            />
-          </label>
-
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            aria-label="Filter document rules"
-          >
-            <option value="all">All rules</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="required">Required</option>
-          </select>
-        </div>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Category</th>
-                <th>Requirement</th>
-                <th>Expiry tracking</th>
-                <th>Reminder</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRules.map((rule) => (
-                <tr key={rule.id}>
-                  <td><strong>{rule.name}</strong></td>
-                  <td>{rule.category}</td>
-                  <td>{rule.required ? "Required" : "Optional"}</td>
-                  <td>{rule.expiryTracked ? "Tracked" : "Not tracked"}</td>
-                  <td>
-                    {rule.expiryTracked ? `${rule.reminderDays} days` : "—"}
-                  </td>
-                  <td>
-                    <StatusBadge
-                      status={rule.active ? "good" : "neutral"}
-                    />
-                    <span>{rule.active ? "Active" : "Inactive"}</span>
-                  </td>
-                  <td>
-                    <div className="table-actions">
-                      <button
-                        className="table-action"
-                        onClick={() => openEditRule(rule)}
-                        aria-label={`Edit ${rule.name}`}
-                      >
-                        <Pencil size={15} /> Edit
-                      </button>
-                      <button
-                        className="table-action"
-                        onClick={() => toggleRule(rule.id)}
-                      >
-                        {rule.active ? "Disable" : "Enable"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredRules.length === 0 && (
-                <tr>
-                  <td colSpan="7">No document rules match your search.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+      <span
+        aria-hidden="true"
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
+          after:absolute after:left-1 after:top-1 after:h-4 after:w-4
+          after:rounded-full after:bg-white after:shadow-sm after:transition-transform
+          peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-teal-100
+          ${
+            checked
+              ? "bg-teal-600 after:translate-x-5"
+              : "bg-slate-300"
+          }`}
+      />
+    </label>
   );
 }
