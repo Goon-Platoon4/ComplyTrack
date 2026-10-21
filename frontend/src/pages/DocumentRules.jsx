@@ -346,3 +346,220 @@ function RuleForm({
     </form>
   );
 }
+
+export default function DocumentRules() {
+  const [rules, setRules] = useState(initialRules);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [form, setForm] = useState(emptyForm);
+
+  const stats = useMemo(
+    () => [
+      {
+        title: "Total rules",
+        value: rules.length,
+        description: "All configured requirements",
+        icon: ClipboardList,
+        color: "blue",
+      },
+      {
+        title: "Active rules",
+        value: rules.filter((rule) => rule.active).length,
+        description: "Currently enabled rules",
+        icon: ShieldCheck,
+        color: "teal",
+      },
+      {
+        title: "Required rules",
+        value: rules.filter((rule) => rule.active && rule.required).length,
+        description: "Active mandatory documents",
+        icon: FileCheck2,
+        color: "violet",
+      },
+      {
+        title: "Expiry tracked",
+        value: rules.filter((rule) => rule.active && rule.expiryTracked).length,
+        description: "Active rules with expiry tracking",
+        icon: Clock3,
+        color: "amber",
+      },
+    ],
+    [rules]
+  );
+
+  const filteredRules = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return rules
+      .filter((rule) => {
+        const matchesSearch =
+          rule.name.toLowerCase().includes(query) ||
+          rule.category.toLowerCase().includes(query);
+
+        const matchesStatus =
+          filter === "all" ||
+          (filter === "active" && rule.active) ||
+          (filter === "inactive" && !rule.active) ||
+          (filter === "required" && rule.required);
+
+        const matchesCategory =
+          categoryFilter === "all" || rule.category === categoryFilter;
+
+        return matchesSearch && matchesStatus && matchesCategory;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [rules, search, filter, categoryFilter]);
+
+
+
+==================== SECTION 4 (lines 419-563) ====================
+
+  function resetForm() {
+    setForm({ ...emptyForm });
+    setEditingId(null);
+    setError("");
+  }
+
+  function openNewRule() {
+    resetForm();
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function openEditRule(rule) {
+    setEditingId(rule.id);
+    setForm({
+      name: rule.name,
+      category: categories.includes(rule.category)
+        ? rule.category
+        : "Other",
+      required: rule.required,
+      expiryTracked: rule.expiryTracked,
+      reminderDays: String(rule.reminderDays || 30),
+    });
+    setError("");
+    setMessage("");
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    resetForm();
+  }
+
+  function saveRule(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    const name = form.name.trim();
+    const category = form.category.trim();
+    const reminderDays = Number(form.reminderDays);
+
+    if (!name || !category) {
+      setError("Please enter a document name and select a category.");
+      return;
+    }
+
+    if (name.length > 120) {
+      setError("The document name must be 120 characters or fewer.");
+      return;
+    }
+
+    if (
+      form.expiryTracked &&
+      (!Number.isInteger(reminderDays) ||
+        reminderDays < 1 ||
+        reminderDays > 365)
+    ) {
+      setError("The reminder period must be a whole number between 1 and 365.");
+      return;
+    }
+
+    const duplicate = rules.some(
+      (rule) =>
+        rule.name.trim().toLowerCase() === name.toLowerCase() &&
+        rule.id !== editingId
+    );
+
+    if (duplicate) {
+      setError("A rule with this document name already exists.");
+      return;
+    }
+
+    const ruleData = {
+      name,
+      category,
+      required: form.required,
+      expiryTracked: form.expiryTracked,
+      reminderDays: form.expiryTracked ? reminderDays : 0,
+    };
+
+    if (editingId !== null) {
+      setRules((current) =>
+        current.map((rule) =>
+          rule.id === editingId ? { ...rule, ...ruleData } : rule
+        )
+      );
+      setMessage("Document rule updated successfully.");
+    } else {
+      setRules((current) => {
+        const nextId = current.reduce(
+          (maxId, rule) => Math.max(maxId, rule.id),
+          0
+        ) + 1;
+
+        return [
+          ...current,
+          {
+            id: nextId,
+            ...ruleData,
+            active: true,
+          },
+        ];
+      });
+      setMessage("Document rule created successfully.");
+    }
+
+    setShowForm(false);
+    resetForm();
+  }
+
+  function toggleRule(id) {
+    const rule = rules.find((item) => item.id === id);
+
+    if (!rule) return;
+
+    if (
+      rule.active &&
+      !window.confirm(
+        `Disable "${rule.name}"? The rule will remain in the list but will be marked inactive.`
+      )
+    ) {
+      return;
+    }
+
+    setRules((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, active: !item.active } : item
+      )
+    );
+
+    setMessage(
+      rule.active
+        ? `"${rule.name}" has been disabled.`
+        : `"${rule.name}" has been enabled.`
+    );
+    setError("");
+  }
+
+  function clearFilters() {
+    setSearch("");
+    setFilter("all");
+    setCategoryFilter("all");
+  }
