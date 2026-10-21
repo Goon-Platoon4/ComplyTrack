@@ -1,4 +1,4 @@
-# ComplyTrack
+# ComplyTrack   ![CI](https://github.com/Goon-Platoon4/ComplyTrack/actions/workflows/ci.yml/badge.svg) 
 
 ### Contractor Compliance. Simplified.
 
