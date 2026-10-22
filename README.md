@@ -1,4 +1,4 @@
-# ComplyTrack
+# ComplyTrack   ![CI](https://github.com/Goon-Platoon4/ComplyTrack/actions/workflows/ci.yml/badge.svg) 
 
 ### Contractor Compliance. Simplified.
 
@@ -8,7 +8,7 @@ ComplyTrack aims to help organisations manage contractor information, organise c
 
 <p align="center">
 
-  <img src="frontend/public/logo.svg" alt="ComplyTrack Logo" width="180" />
+  <img src="frontend/public/logo.webp" alt="ComplyTrack Logo" width="180" />
 
 </p>
 
