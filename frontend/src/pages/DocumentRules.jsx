@@ -703,7 +703,7 @@ export default function DocumentRules() {
 
         {/* Desktop table */}
         <div className="hidden min-w-0 overflow-x-auto lg:block">
-          <table className="w-full min-w-[1100px] table-fixed border-collapse text-left">
+          <table className="w-full min-w-275 table-fixed border-collapse text-left">
             <colgroup>
               <col className="w-[25%]" />
               <col className="w-[15%]" />
@@ -748,7 +748,7 @@ export default function DocumentRules() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="break-words text-sm font-semibold leading-6 text-slate-800">
+                        <p className="wrap-break-word text-sm font-semibold leading-6 text-slate-800">
                           {rule.name}
                         </p>
 
@@ -759,7 +759,7 @@ export default function DocumentRules() {
                     </div>
                   </td>
 
-                  <td className="break-words px-4 py-5 text-sm leading-6 text-slate-600">
+                  <td className="wrap-break-word px-4 py-5 text-sm leading-6 text-slate-600">
                     {rule.category}
                   </td>
 
@@ -863,7 +863,7 @@ export default function DocumentRules() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="break-words text-sm font-bold leading-6 text-slate-900 sm:text-base">
+                  <h3 className="wrap-break-word text-sm font-bold leading-6 text-slate-900 sm:text-base">
                     {rule.name}
                   </h3>
 
