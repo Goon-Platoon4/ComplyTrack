@@ -59,11 +59,11 @@ export default function AppLayout() {
       <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
         <NavLink
           to="/dashboard"
-          className="brand"
+          className="brand group"
           onClick={closeMenu}
           aria-label="ComplyTrack home"
         >
-          <img src="/logo.webp" alt="ComplyTrack" />
+          <img src="/logo.webp" alt="ComplyTrack" className="sidebar-logo" />
         </NavLink>
         
 
