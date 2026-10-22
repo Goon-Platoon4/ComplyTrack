@@ -60,12 +60,12 @@ const sections = [
 
 function Toggle({ checked, onChange, title, description }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-5 border-b border-slate-100 py-4 last:border-b-0">
-      <span className="flex-1">
-        <span className="block text-sm font-semibold text-slate-800">
+    <label className="flex cursor-pointer items-center justify-between gap-5 border-b border-slate-100 py-5 last:border-b-0">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold leading-6 text-slate-800">
           {title}
         </span>
-        <span className="mt-1 block text-xs leading-5 text-slate-500">
+        <span className="mt-1.5 block text-sm leading-6 text-slate-500">
           {description}
         </span>
       </span>
@@ -83,9 +83,7 @@ function Toggle({ checked, onChange, title, description }) {
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
           after:absolute after:left-1 after:top-1 after:h-4 after:w-4
           after:rounded-full after:bg-white after:shadow-sm after:transition-transform
-          peer-checked:bg-teal-600 peer-checked:after:translate-x-5
-          peer-focus-visible:outline-none peer-focus-visible:ring-4
-          peer-focus-visible:ring-teal-100
+          peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-teal-100
           ${
             checked
               ? "bg-teal-600 after:translate-x-5"
@@ -106,7 +104,7 @@ function Field({
 }) {
   return (
     <label className="block min-w-0">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2.5 block text-sm font-semibold text-slate-700">
         {label}
       </span>
 
@@ -116,10 +114,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(name, event.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3
-          text-sm text-slate-800 outline-none transition
-          placeholder:text-slate-400 hover:border-slate-300
-          focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+        className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
       />
     </label>
   );
@@ -128,17 +123,14 @@ function Field({
 function SelectField({ label, value, onChange, children }) {
   return (
     <label className="block min-w-0">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2.5 block text-sm font-semibold text-slate-700">
         {label}
       </span>
 
       <select
         value={value}
         onChange={onChange}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3
-          text-sm text-slate-800 outline-none transition
-          hover:border-slate-300 focus:border-teal-600
-          focus:ring-4 focus:ring-teal-600/10"
+        className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
       >
         {children}
       </select>
@@ -148,11 +140,11 @@ function SelectField({ label, value, onChange, children }) {
 
 function SectionHeading({ title, description }) {
   return (
-    <div className="mb-6">
-      <h3 className="text-base font-bold tracking-tight text-slate-900">
+    <div className="mb-7">
+      <h3 className="text-lg font-bold tracking-tight text-slate-900">
         {title}
       </h3>
-      <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
         {description}
       </p>
     </div>
@@ -161,8 +153,8 @@ function SectionHeading({ title, description }) {
 
 function Subsection({ title, children }) {
   return (
-    <div className="mt-7 border-t border-slate-100 pt-5">
-      <h3 className="mb-2 text-sm font-bold text-slate-800">{title}</h3>
+    <div className="mt-8 border-t border-slate-100 pt-6 first:mt-0 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 text-sm font-bold text-slate-800">{title}</h3>
       {children}
     </div>
   );
@@ -170,42 +162,44 @@ function Subsection({ title, children }) {
 
 function InfoBox({ children, icon: Icon = Info }) {
   return (
-    <div className="mt-6 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50 p-4">
-      <Icon size={18} className="mt-0.5 shrink-0 text-sky-700" />
-      <p className="text-xs leading-5 text-sky-900">{children}</p>
+    <div className="mt-7 flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50 p-4 sm:p-5">
+      <Icon size={19} className="mt-0.5 shrink-0 text-sky-700" />
+      <p className="text-sm leading-6 text-sky-900">{children}</p>
     </div>
   );
 }
 
 function PolicyRow({ title, description, action }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
+    <div className="flex flex-col gap-3 border-b border-slate-100 py-5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-800">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
+        <p className="text-sm font-semibold leading-6 text-slate-800">
+          {title}
+        </p>
+        <p className="mt-1.5 text-sm leading-6 text-slate-500">
           {description}
         </p>
       </div>
-      {action}
+      <div className="flex shrink-0 items-center">{action}</div>
     </div>
   );
 }
 
 function RoleRow({ icon: Icon, title, description, access }) {
   return (
-    <div className="flex items-center gap-3 border-b border-slate-100 py-4 last:border-b-0">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-        <Icon size={19} />
+    <div className="flex items-start gap-4 border-b border-slate-100 py-5 last:border-b-0">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+        <Icon size={20} />
       </div>
 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-slate-800">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
+        <p className="mt-1.5 text-sm leading-6 text-slate-500">
           {description}
         </p>
       </div>
 
-      <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600">
+      <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
         {access}
       </span>
     </div>
@@ -222,29 +216,41 @@ export default function Settings() {
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
   const [exportFormat, setExportFormat] = useState("CSV");
 
-  const updateOrganisation = (name, value) => {
+  const activeLabel =
+    sections.find((section) => section.id === activeSection)?.label ||
+    "Organisation";
+
+  function updateOrganisation(name, value) {
     setOrganisation((current) => ({ ...current, [name]: value }));
     setSavedMessage("");
-  };
+  }
 
-  const updateNotification = (name, value) => {
+  function updateNotification(name, value) {
     setNotifications((current) => ({ ...current, [name]: value }));
     setSavedMessage("");
-  };
+  }
 
-  const updateSecurity = (name, value) => {
+  function updateSecurity(name, value) {
     setSecurity((current) => ({ ...current, [name]: value }));
     setSavedMessage("");
-  };
+  }
 
-  const handleSave = (event) => {
+  function handleSave(event) {
     event.preventDefault();
     setSavedMessage(
       "Demo only: your changes have not been saved to the database."
     );
-  };
+  }
 
-  const handleReset = () => {
+  function handleReset() {
+    if (
+      !window.confirm(
+        "Reset all settings to their original demo values?"
+      )
+    ) {
+      return;
+    }
+
     setOrganisation({ ...initialOrganisation });
     setNotifications({ ...initialNotifications });
     setSecurity({ ...initialSecurity });
@@ -252,49 +258,56 @@ export default function Settings() {
     setDateFormat("DD/MM/YYYY");
     setExportFormat("CSV");
     setSavedMessage("Demo settings have been reset.");
-  };
+  }
 
-  const activeLabel =
-    sections.find((section) => section.id === activeSection)?.label ||
-    "Organisation";
+  function changeSection(id) {
+    setActiveSection(id);
+    setSavedMessage("");
+  }
 
   return (
-    <section className="min-w-0 space-y-6 pb-8">
+    <section className="mx-auto w-full min-w-0 max-w-[1800px] space-y-7 px-4 pb-10 pt-5 sm:space-y-8 sm:px-6 sm:pt-7 lg:px-8 xl:px-10">
+      {/* Page heading */}
       <PageHeader
+        eyebrow="Administration"
         title="Settings"
         description="Manage organisation details, compliance policies, notifications and access controls."
       />
 
-      {/* Workspace overview */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
+      {/* Organisation configuration banner */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:gap-5 sm:p-6">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
           <Settings2 size={24} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-bold text-slate-900">
+          <h2 className="text-base font-bold text-slate-900">
             Organisation configuration
           </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
             Configure how ComplyTrack works for your organisation. Review
             policy changes before applying them to live compliance records.
           </p>
         </div>
 
-        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           Demo configuration
         </span>
       </div>
 
-      <div className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+      {/* Navigation and active settings content */}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[250px_minmax(0,1fr)]">
         {/* Settings navigation */}
-        <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <p className="px-3 pb-3 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        <aside className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-6">
+          <p className="px-3 pb-3 pt-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
             Workspace settings
           </p>
 
-          <nav aria-label="Settings sections" className="space-y-1">
+          <nav
+            aria-label="Settings sections"
+            className="grid grid-cols-1 gap-1 sm:grid-cols-2 xl:grid-cols-1"
+          >
             {sections.map(({ id, label, icon: Icon }) => {
               const isActive = activeSection === id;
 
@@ -303,32 +316,27 @@ export default function Settings() {
                   key={id}
                   type="button"
                   aria-current={isActive ? "page" : undefined}
-                  onClick={() => {
-                    setActiveSection(id);
-                    setSavedMessage("");
-                  }}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition
-                    focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/15
-                    ${
-                      isActive
-                        ? "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-100"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
+                  onClick={() => changeSection(id)}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/15 ${
+                    isActive
+                      ? "bg-teal-50 text-teal-800 ring-1 ring-inset ring-teal-100"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
                 >
-                  <Icon size={18} className="shrink-0" />
-                  <span className="flex-1">{label}</span>
-                  {isActive && <ChevronRight size={15} />}
+                  <Icon size={19} className="shrink-0" />
+                  <span className="min-w-0 flex-1">{label}</span>
+                  {isActive && <ChevronRight size={16} />}
                 </button>
               );
             })}
           </nav>
 
-          <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+          <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4">
             <div className="flex items-center gap-2 text-slate-700">
-              <LockKeyhole size={15} />
-              <span className="text-xs font-bold">Access control</span>
+              <LockKeyhole size={16} />
+              <span className="text-sm font-bold">Access control</span>
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-slate-500">
               Organisation-wide settings should only be changed by authorised
               administrators.
             </p>
@@ -336,25 +344,25 @@ export default function Settings() {
 
           <Link
             to="/audit-log"
-            className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-teal-700"
+            className="mt-3 flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-teal-700"
           >
-            <Clock3 size={16} />
+            <Clock3 size={17} />
             View audit log
-            <ChevronRight size={14} className="ml-auto" />
+            <ChevronRight size={15} className="ml-auto" />
           </Link>
         </aside>
 
-        {/* Active settings section */}
+        {/* Active settings form */}
         <form
           onSubmit={handleSave}
           className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
-          <div className="flex flex-col justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:px-7">
+          <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-700">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
                 Configuration
               </p>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
+              <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-900">
                 {activeLabel}
               </h2>
             </div>
@@ -365,7 +373,8 @@ export default function Settings() {
             </span>
           </div>
 
-          <div className="p-5 sm:p-7">
+          <div className="min-w-0 p-5 sm:p-8">
+            {/* Organisation */}
             {activeSection === "organisation" && (
               <>
                 <SectionHeading
@@ -373,7 +382,7 @@ export default function Settings() {
                   description="The legal and contact information used to identify your organisation in the workspace and reports."
                 />
 
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
                   <Field
                     label="Legal organisation name"
                     name="organisationName"
@@ -409,14 +418,15 @@ export default function Settings() {
                   <Field
                     label="Organisation email"
                     name="email"
+                    type="email"
                     value={organisation.email}
                     onChange={updateOrganisation}
-                    type="email"
                     placeholder="compliance@organisation.co.za"
                   />
                   <Field
                     label="Contact number"
                     name="phone"
+                    type="tel"
                     value={organisation.phone}
                     onChange={updateOrganisation}
                     placeholder="+27"
@@ -432,6 +442,7 @@ export default function Settings() {
               </>
             )}
 
+            {/* Notifications */}
             {activeSection === "notifications" && (
               <>
                 <SectionHeading
@@ -503,6 +514,7 @@ export default function Settings() {
               </>
             )}
 
+            {/* Compliance */}
             {activeSection === "compliance" && (
               <>
                 <SectionHeading
@@ -513,32 +525,30 @@ export default function Settings() {
                 <Subsection title="Policy defaults">
                   <PolicyRow
                     title="Expiring soon threshold"
-                    description="The current default window for documents approaching expiry."
+                    description="The default window for documents approaching expiry."
                     action={
-                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
                         30 days
                       </span>
                     }
                   />
-
                   <PolicyRow
                     title="Required document rules"
                     description="Define which documents each contractor must provide."
                     action={
                       <Link
                         to="/document-rules"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-900"
                       >
-                        Manage rules <ChevronRight size={14} />
+                        Manage rules <ChevronRight size={16} />
                       </Link>
                     }
                   />
-
                   <PolicyRow
                     title="Accepted document formats"
                     description="Proposed formats for contractor document uploads."
                     action={
-                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
                         PDF, JPG, PNG
                       </span>
                     }
@@ -553,11 +563,12 @@ export default function Settings() {
               </>
             )}
 
+            {/* Team and access */}
             {activeSection === "team" && (
               <>
                 <SectionHeading
                   title="Team and access"
-                  description="Define appropriate access levels for people working with sensitive contractor compliance records."
+                  description="Review proposed access levels for people working with sensitive contractor compliance records."
                 />
 
                 <Subsection title="Proposed access roles">
@@ -589,12 +600,13 @@ export default function Settings() {
 
                 <InfoBox>
                   These roles are illustrative. Invitations, role assignments
-                  and server-side authorisation must be implemented before
+                  and server-side authorization must be implemented before
                   access restrictions are enforced.
                 </InfoBox>
               </>
             )}
 
+            {/* Security */}
             {activeSection === "security" && (
               <>
                 <SectionHeading
@@ -602,7 +614,7 @@ export default function Settings() {
                   description="Review proposed security defaults for user sessions and sensitive activity."
                 />
 
-                <div className="max-w-md">
+                <div className="max-w-xl">
                   <SelectField
                     label="Session timeout"
                     value={security.sessionTimeout}
@@ -636,9 +648,11 @@ export default function Settings() {
                   />
                   <Toggle
                     title="Restrict data exports"
-                    description="Limit exports to authorised roles when permissions are implemented."
+                    description="Limit exports to authorized roles when permissions are implemented."
                     checked={security.restrictExports}
-                    onChange={(value) => updateSecurity("restrictExports", value)}
+                    onChange={(value) =>
+                      updateSecurity("restrictExports", value)
+                    }
                   />
                 </Subsection>
 
@@ -650,6 +664,7 @@ export default function Settings() {
               </>
             )}
 
+            {/* Data and exports */}
             {activeSection === "data" && (
               <>
                 <SectionHeading
@@ -657,7 +672,7 @@ export default function Settings() {
                   description="Configure display preferences and review data governance requirements."
                 />
 
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <SelectField
                     label="Default timezone"
                     value={timezone}
@@ -705,13 +720,12 @@ export default function Settings() {
                     action={
                       <Link
                         to="/audit-log"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-900"
                       >
-                        View history <ChevronRight size={14} />
+                        View history <ChevronRight size={16} />
                       </Link>
                     }
                   />
-
                   <PolicyRow
                     title="Backups and retention"
                     description="Define retention periods and verify backup procedures before enabling automated cleanup."
@@ -733,11 +747,11 @@ export default function Settings() {
           </div>
 
           {/* Form actions */}
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
             >
               <RotateCcw size={16} />
               Reset demo values
@@ -745,9 +759,9 @@ export default function Settings() {
 
             <button
               type="submit"
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
             >
-              <Save size={16} />
+              <Save size={17} />
               Save changes
             </button>
           </div>
@@ -755,18 +769,19 @@ export default function Settings() {
           {savedMessage && (
             <div
               role="status"
-              className="flex items-start gap-3 border-t border-amber-100 bg-amber-50 px-5 py-4 text-sm text-amber-900 sm:px-7"
+              className="flex items-start gap-3 border-t border-amber-100 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900 sm:px-8"
             >
-              <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+              <CheckCircle2 size={19} className="mt-0.5 shrink-0" />
               <span>{savedMessage}</span>
             </div>
           )}
         </form>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <CircleHelp size={18} className="mt-0.5 shrink-0 text-slate-500" />
-        <p className="text-xs leading-5 text-slate-500">
+      {/* Prototype notice */}
+      <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+        <CircleHelp size={19} className="mt-0.5 shrink-0 text-slate-500" />
+        <p className="text-sm leading-6 text-slate-500">
           Settings are currently a frontend prototype. Changes reset when the
           page reloads. Connect the settings API and enforce administrator
           permissions before using this page with real organisation data.
