@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
 
 :root {
   --navy: #0A4531; /* British Racing Green (Sidebar) */
@@ -76,7 +76,10 @@ a {
 .brand {
   padding: 24px 20px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  display: block; /* Ensures the whole area is clickable */
 }
+
+
 
 .brand img {
   width: 170px;
@@ -87,6 +90,29 @@ a {
 .sidebar-nav {
   padding: 18px 12px;
   overflow: auto;
+}
+
+.sidebar-logo {
+  width: 170px;
+  height: auto;
+  mix-blend-mode: screen; 
+  transform-origin: left center;
+  
+  /* 1. This handles the smooth shrink when you move the mouse away */
+  /* It takes 2 seconds to shrink back to normal */
+  transition: transform 2s ease-in-out;
+}
+
+/* When the user hovers over the brand link */
+.brand:hover .sidebar-logo {
+  /* 2. This handles the grow AFTER waiting 2 seconds */
+  /* The '0.5s' is how fast it grows once the 2s wait is over */
+  animation: growAfterDelay 0.5s ease-in-out 2s forwards;
+}
+
+@keyframes growAfterDelay {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
 }
 
 .nav-section-label {
@@ -410,7 +436,7 @@ a {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr 1fr; /* Or 1fr 1fr */
   gap: 16px;
 }
 
@@ -419,7 +445,7 @@ a {
 }
 
 .panel-wide {
-  min-width: 0;
+  grid-column: span 2; /* THIS is the magic fix */
 }
 
 .panel-header {
@@ -757,7 +783,11 @@ td strong {
   }
 
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Stack everything on one column on tablets */
+  }
+  
+  .panel-wide {
+    grid-column: span 1; /* Reset the span so it doesn't overflow on mobile */
   }
 
   .sidebar {
@@ -823,6 +853,48 @@ td strong {
   }
 }
 
+
+.animate-rise-up {
+  transform-origin: bottom;
+  animation: riseUpAnimation 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes riseUpAnimation {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0.8;
+  }
+}
+
+/* 1. Animation for the Compliance Trend Bars */
+.animate-rise-up {
+  transform-origin: bottom;
+  animation: riseUpAnimation 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes riseUpAnimation {
+  0% { transform: scaleY(0); opacity: 0; }
+  100% { transform: scaleY(1); opacity: 0.8; }
+}
+
+/* 2. Animation for the Document Coverage Progress Bars */
+.animate-fill-bar {
+  width: 0%; /* Start at 0 */
+  animation: fillBar 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fillBar {
+  0% { width: 0%; }
+  100% { width: var(--target-width); }
+}
+
+
+
+
 @media (max-width: 780px) {
   .sidebar {
     transform: translateX(-100%);
@@ -836,3 +908,6 @@ td strong {
     margin-right: 12px;
   }
 }
+
+
+

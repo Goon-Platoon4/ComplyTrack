@@ -1,4 +1,7 @@
-import { ArrowRight, Building2, CheckCircle2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, LockKeyhole, Mail, Eye, EyeOff } from "lucide-react";
 
 const features = [
   "Contractor compliance tracking",
@@ -8,124 +11,127 @@ const features = [
 ];
 
 export default function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      window.location.href = "/dashboard";
+    }, 1000);
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-dashed border-slate-300 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-          Blueprint · Authentication / Login
-        </div>
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-6xl grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:grid-cols-[1.1fr_0.9fr] min-h-0 lg:min-h-[600px]">
+        
+        {/* LEFT PANEL - With Curved Shape */}
+        <section className="relative overflow-hidden bg-[var(--navy)] p-8 sm:p-12 text-white hidden lg:flex flex-col justify-between">
+          
+          {/* The curved shape trick */}
+          <div className="absolute top-0 right-0 w-[150%] h-[120%] bg-white opacity-[0.03] rounded-b-[50%] transform translate-x-1/4 -translate-y-1/4"></div>
 
-        <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="border-b border-slate-200 bg-[var(--navy)] p-7 text-white sm:p-10 lg:border-b-0 lg:border-r">
-            <div className="mb-14 flex items-center gap-3">
-              <img 
-                src="/logo.webp" 
-                alt="ComplyTrack" 
-                className="h-16 w-auto object-contain" 
-                style={{ mixBlendMode: 'screen' }} 
-              />
-            </div>
-
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--teal-2)]">Login experience</span>
-            <h1 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight sm:text-4xl text-[var(--teal-2)]">
+          <div className="relative z-10 flex flex-col items-center text-center mt-8">
+            <img 
+              src="/logo.webp" 
+              alt="ComplyTrack" 
+              className="h-28 sm:h-32 w-auto object-contain mb-12 transition-transform duration-300 ease-in-out hover:scale-110 cursor-pointer" 
+              style={{ mixBlendMode: 'screen' }} 
+            />
+            
+            <h1 className="mt-3 max-w-lg text-4xl font-extrabold tracking-tight text-[var(--teal-2)] leading-tight">
               Secure access to the contractor compliance workspace.
             </h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
-              This area introduces the product and explains what an authenticated user can access.
-            </p>
 
-            <div className="mt-8 space-y-3">
-              {features.map((feature) => (
-                <div key={feature} className="flex items-center gap-3 text-sm text-slate-200">
-                  <CheckCircle2 size={17} className="shrink-0 text-teal-300" />
+            <div className="mt-12 space-y-4 text-left w-full max-w-sm mx-auto">
+              {features.map((feature, index) => (
+                <div 
+                  key={feature} 
+                  className="flex items-center gap-3 text-sm text-slate-200 opacity-0 animate-[slideIn_0.5s_ease-out_forwards]"
+                  style={{ animationDelay: `${index * 100 + 200}ms` }}
+                >
+                  <CheckCircle2 size={18} className="shrink-0 text-[var(--teal-2)]" />
                   <span>{feature}</span>
                 </div>
               ))}
             </div>
+          </div>
+          
+          <div className="relative z-10 mt-12 text-center text-xs text-slate-400">
+             Built for South African organisations By South African developers
+          </div>
+        </section>
 
-            <div className="mt-14 border-t border-white/10 pt-5 text-xs text-slate-400">
-              Built for South African organisations
+        {/* RIGHT PANEL - Form */}
+        <section className="p-6 sm:p-12 flex flex-col justify-center">
+          <div className="mx-auto w-full max-w-md">
+            
+            <div className="lg:hidden flex justify-center mb-8">
+              <img src="/logo.webp" alt="ComplyTrack" className="h-20 w-auto object-contain" style={{ mixBlendMode: 'screen' }} />
             </div>
-          </section>
 
-          <section className="p-6 sm:p-10">
-            <div className="mx-auto max-w-md">
-              <div className="mb-7 grid h-11 w-11 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-700">
-                <LockKeyhole size={21} />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Authentication form</span>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight">Sign in</h2>
-              <p className="mt-2 text-sm text-slate-500">User authentication form goes here.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 text-center lg:text-left">Sign in</h2>
+            <p className="mt-2 text-sm text-slate-500 text-center lg:text-left">Use the account your administrator created.</p>
 
-              <div className="mt-7 space-y-5">
-                <BlueprintInput icon={Mail} label="Email address" placeholder="User enters email" />
-                <BlueprintInput icon={LockKeyhole} label="Password" placeholder="User enters password" />
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Email address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 text-slate-400" size={18} />
+                  <input type="email" required placeholder="you@company.com" className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[var(--navy)]/20 transition-all" />
+                </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                <span>□ Remember me</span>
-                <span className="font-semibold text-teal-700">Forgot password?</span>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Password</label>
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-3 text-slate-400" size={18} />
+                  <input type={showPassword ? "text" : "password"} required placeholder="••••••••" className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[var(--navy)]/20 transition-all" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
-              <button type="button" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--navy)] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90">
-                Sign in <ArrowRight size={17} />
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-600">
+                  <input type="checkbox" className="rounded border-slate-300 text-[var(--navy)] focus:ring-[var(--navy)]" />
+                  Remember me
+                </label>
+                <a href="#" className="font-semibold text-[var(--navy)] hover:underline">Forgot password?</a>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="group relative mt-2 flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-[var(--navy)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[#083525] disabled:opacity-70"
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></span>
+                {isLoading ? "Signing in..." : "Sign in"}
+                {!isLoading && <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />}
               </button>
+            </form>
 
-              <div className="mt-6 flex gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                <ShieldCheck size={19} className="mt-0.5 shrink-0 text-teal-700" />
-                <div>
-                  <strong className="block text-sm">Secure authentication</strong>
-                  <span className="mt-1 block text-xs leading-5 text-slate-500">
-                    Authentication will eventually use the backend authentication API and secure sessions or tokens.
-                  </span>
-                </div>
-              </div>
+            {/* Added the Sign Up link here */}
+            <p className="mt-8 text-center text-sm text-slate-600">
+              Don't have an account? <Link to="/signup" className="font-bold text-[var(--navy)] hover:underline">Sign up</Link>
+            </p>
 
-              <div className="mt-4 flex gap-3 rounded-xl border border-slate-200 p-4">
-                <Building2 size={19} className="mt-0.5 shrink-0 text-slate-500" />
-                <div>
-                  <strong className="block text-sm">Organisation workspace</strong>
-                  <span className="mt-1 block text-xs leading-5 text-slate-500">
-                    The authenticated user&apos;s organisation will be loaded after successful login.
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <BlueprintNotes items={[
-          "Login should call the backend authentication endpoint.",
-          "Do not hard-code passwords or users in the frontend.",
-          "Authentication state should be stored through the application auth context.",
-          "Protected routes should redirect unauthenticated users to Login.",
-          "Forgot password can be implemented as a separate feature later.",
-        ]} />
+          </div>
+        </section>
       </div>
+
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </main>
-  );
-}
-
-function BlueprintInput({ icon: Icon, label, placeholder }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-700">
-        <Icon size={15} /> {label}
-      </div>
-      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-400">
-        {placeholder}
-      </div>
-    </div>
-  );
-}
-
-function BlueprintNotes({ items }) {
-  return (
-    <section className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
-      <strong className="text-sm">Development notes</strong>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-xs leading-5 text-slate-600">
-        {items.map((item) => <li key={item}>{item}</li>)}
-      </ul>
-    </section>
   );
 }
