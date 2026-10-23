@@ -1,57 +1,297 @@
-import { AlertTriangle, ArrowLeft, CalendarDays, CheckCircle2, Database, FileText, ShieldCheck, UploadCloud } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  FileText,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+
+import { contractors, requiredDocuments } from "../data/contractors";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 export default function UploadDocument() {
   const { id } = useParams();
+  const contractor = contractors.find(
+    (item) => item.id === id || item.id === `CNT-${id.padStart(3, "0")}`
+  );
+  const fileInputRef = useRef(null);
+  const [documentType, setDocumentType] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [file, setFile] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [submitMessage, setSubmitMessage] = useState("");
+
+  if (!contractor) {
+    return (
+      <section className="page">
+        <Link to="/contractors" className="link-button mb-5">
+          <ArrowLeft size={15} />
+          Back to contractors
+        </Link>
+        <div className="panel">
+          <h1 className="text-xl font-bold">Contractor not found</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            There is no contractor record matching this ID.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const validate = () => {
+    const nextErrors = {};
+
+    if (!documentType) nextErrors.documentType = "Select a document type.";
+    if (!referenceNumber.trim()) nextErrors.referenceNumber = "Enter the document reference number.";
+    if (!issueDate) nextErrors.issueDate = "Select the issue date.";
+    if (!expiryDate) nextErrors.expiryDate = "Select the expiry date.";
+    if (issueDate && expiryDate && expiryDate <= issueDate) {
+      nextErrors.expiryDate = "Expiry date must be after the issue date.";
+    }
+    if (!file) {
+      nextErrors.file = "Choose a document file.";
+    } else if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      nextErrors.file = "Choose a PDF, JPG, or PNG file.";
+    } else if (file.size > MAX_FILE_SIZE) {
+      nextErrors.file = "The selected file must be 10 MB or smaller.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files?.[0] || null;
+    setFile(selectedFile);
+    setErrors((current) => ({ ...current, file: "" }));
+    setSubmitMessage("");
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setSubmitMessage("");
+    if (!validate()) return;
+
+    setSubmitMessage(
+      "All fields are valid. Document storage is not connected yet, so this file has not been uploaded."
+    );
+  };
+
+  const removeFile = () => {
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setErrors((current) => ({ ...current, file: "" }));
+    setSubmitMessage("");
+  };
 
   return (
-    <section className="mx-auto max-w-[1200px] space-y-5 p-4 text-slate-900 sm:p-6 lg:p-8">
-      <BlueprintLabel text="Blueprint · Document Upload" />
-      <Link to={`/contractors/${id || "1"}`} className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-teal-700"><ArrowLeft size={15} /> Back to Contractor</Link>
+    <section className="page">
+      <Link to={`/contractors/${contractor.id}`} className="link-button mb-5">
+        <ArrowLeft size={15} />
+        Back to {contractor.name}
+      </Link>
 
-      <header className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 sm:p-6">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">01 · Upload workflow</span>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Upload Compliance Document</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Define the fields, validation rules and backend flow required to store a contractor compliance document.</p>
-      </header>
-
-      <BlueprintPanel number="02" title="Document Information" description="Metadata required before a file can be stored." icon={FileText}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Contractor" value="Contractor Name · REG-XXXXXX" />
-          <Field label="Document type" value="Select required document type" />
-          <Field label="Issue date" value="DD / MM / YYYY" icon={CalendarDays} />
-          <Field label="Expiry date" value="DD / MM / YYYY" icon={CalendarDays} />
+      <div className="page-header">
+        <div>
+          <div className="eyebrow">Contractor documents</div>
+          <h1>Upload compliance document</h1>
+          <p>Add document details for {contractor.name}.</p>
         </div>
-      </BlueprintPanel>
-
-      <BlueprintPanel number="03" title="File Upload" description="The upload area should accept the supported compliance document formats." icon={UploadCloud}>
-        <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center sm:p-12"><UploadCloud size={34} className="mx-auto text-slate-400" /><strong className="mt-3 block text-sm">Drag and drop file here</strong><span className="mt-1 block text-xs text-slate-500">or choose a file from the user's device</span><button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-teal-600/30 bg-teal-700 text-white hover:bg-teal-800 mt-5">Choose File</button><p className="mt-4 text-[11px] text-slate-400">Define allowed file types, maximum size and virus/security checks during implementation.</p></div>
-      </BlueprintPanel>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <BlueprintPanel number="04" title="Validation Rules" description="Rules that must be checked before accepting the document." icon={ShieldCheck}>
-          <div className="space-y-2">{[
-            "Document type is required.", "Expiry date is required when applicable.", "File type and file size are validated.", "The contractor exists and the user is authorised.", "Duplicate or replacement behaviour is defined.",
-          ].map((rule) => <div key={rule} className="flex gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-600"><CheckCircle2 size={15} className="shrink-0 text-teal-700" />{rule}</div>)}</div>
-        </BlueprintPanel>
-        <BlueprintPanel number="05" title="Backend / Storage Flow" description="The expected path from browser to persistent storage." icon={Database}>
-          <div className="space-y-2 text-center">{["React upload form", "POST /api/documents", "Express controller + validation", "File storage + PostgreSQL metadata", "Updated compliance state"].map((step, i, all) => <div key={step}><div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-700">{step}</div>{i < all.length - 1 && <div className="py-1 text-slate-400">↓</div>}</div>)}</div>
-        </BlueprintPanel>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900"><div className="flex gap-3"><AlertTriangle size={17} className="shrink-0" /><div><strong>Security consideration</strong><p className="mt-1 leading-5">Do not treat a successful browser upload as proof of compliance. The backend must validate the document metadata and enforce authorisation before persistence.</p></div></div></div>
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <h2><FileText size={17} /> Document information</h2>
+              <p>Enter the document details and validity dates.</p>
+            </div>
+          </div>
 
-      <BlueprintNotes items={[
-        "The final upload form should use controlled fields and clear validation messages.",
-        "The backend should own document validation and compliance calculations.",
-        "Storage implementation should be selected before the production upload endpoint is completed.",
-        "A successful upload should create the document record and refresh the contractor compliance state.",
-      ]} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Contractor">
+              <div className="flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                {contractor.name} <span className="ml-2 text-slate-500">· {contractor.regNo}</span>
+              </div>
+            </FormField>
+
+            <FormField label="Document type" error={errors.documentType}>
+              <select
+                value={documentType}
+                onChange={(event) => {
+                  setDocumentType(event.target.value);
+                  setErrors((current) => ({ ...current, documentType: "" }));
+                  setSubmitMessage("");
+                }}
+                aria-invalid={Boolean(errors.documentType)}
+                className={inputClass(Boolean(errors.documentType))}
+              >
+                <option value="">Select a required document</option>
+                {requiredDocuments.map((document) => (
+                  <option key={document} value={document}>{document}</option>
+                ))}
+              </select>
+            </FormField>
+
+            <FormField label="Reference number" error={errors.referenceNumber}>
+              <input
+                type="text"
+                value={referenceNumber}
+                onChange={(event) => {
+                  setReferenceNumber(event.target.value);
+                  setErrors((current) => ({ ...current, referenceNumber: "" }));
+                  setSubmitMessage("");
+                }}
+                placeholder="Enter the reference shown on the document"
+                aria-invalid={Boolean(errors.referenceNumber)}
+                className={inputClass(Boolean(errors.referenceNumber))}
+              />
+            </FormField>
+
+            <FormField label="Issue date" error={errors.issueDate}>
+              <input
+                type="date"
+                value={issueDate}
+                max={expiryDate || undefined}
+                onChange={(event) => {
+                  setIssueDate(event.target.value);
+                  setErrors((current) => ({ ...current, issueDate: "", expiryDate: "" }));
+                  setSubmitMessage("");
+                }}
+                aria-invalid={Boolean(errors.issueDate)}
+                className={inputClass(Boolean(errors.issueDate))}
+              />
+            </FormField>
+
+            <FormField label="Expiry date" error={errors.expiryDate}>
+              <input
+                type="date"
+                value={expiryDate}
+                min={issueDate || undefined}
+                onChange={(event) => {
+                  setExpiryDate(event.target.value);
+                  setErrors((current) => ({ ...current, expiryDate: "" }));
+                  setSubmitMessage("");
+                }}
+                aria-invalid={Boolean(errors.expiryDate)}
+                className={inputClass(Boolean(errors.expiryDate))}
+              />
+            </FormField>
+
+            <FormField label="Notes" optional>
+              <textarea
+                value={notes}
+                onChange={(event) => {
+                  setNotes(event.target.value);
+                  setSubmitMessage("");
+                }}
+                rows={3}
+                maxLength={1000}
+                placeholder="Add any relevant notes about this document"
+                className={`${inputClass(false)} resize-y`}
+              />
+            </FormField>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <h2><UploadCloud size={17} /> Document file</h2>
+              <p>PDF, JPG, or PNG files up to 10 MB.</p>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={handleFileChange}
+            className="sr-only"
+            aria-label="Choose document file"
+          />
+
+          {file ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <FileText className="shrink-0 text-[var(--teal)]" size={20} />
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm text-slate-800">{file.name}</strong>
+                  <span className="text-xs text-slate-500">{formatFileSize(file.size)}</span>
+                </div>
+              </div>
+              <button type="button" className="secondary-button" onClick={removeFile}>
+                <Trash2 size={15} />
+                Remove file
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full flex-col items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center transition hover:border-[var(--teal)] hover:bg-slate-50/70"
+            >
+              <UploadCloud size={30} className="text-slate-400" />
+              <strong className="mt-3 text-sm text-slate-700">Choose a document to upload</strong>
+              <span className="mt-1 text-xs text-slate-500">PDF, JPG, or PNG · 10 MB maximum</span>
+            </button>
+          )}
+          {errors.file && <ErrorMessage>{errors.file}</ErrorMessage>}
+        </section>
+
+        {submitMessage && (
+          <div role="status" className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{submitMessage}</span>
+          </div>
+        )}
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <Link to={`/contractors/${contractor.id}`} className="secondary-button">
+            Cancel
+          </Link>
+          <button type="submit" className="primary-button">
+            <CheckCircle2 size={16} />
+            Validate document
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
 
-function BlueprintLabel({ text }) { return <div className="inline-flex rounded-full border border-dashed border-slate-300 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{text}</div>; }
-function BlueprintPanel({ number, title, description, icon: Icon, children }) { return <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 sm:p-6"><div className="mb-5 flex items-start justify-between gap-4"><div><span className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">{number}</span><h2 className="mt-1 text-lg font-bold">{title}</h2><p className="mt-1 text-sm leading-6 text-slate-500">{description}</p></div><Icon size={21} className="shrink-0 text-slate-400" /></div>{children}</section>; }
-function Field({ label, value, icon: Icon }) { return <div><span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</span><div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-400">{Icon && <Icon size={16} />}{value}</div></div>; }
-function BlueprintNotes({ items }) { return <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5"><strong className="text-sm">Development notes</strong><ul className="mt-3 list-disc space-y-2 pl-5 text-xs leading-5 text-slate-600">{items.map((item) => <li key={item}>{item}</li>)}</ul></section>; }
+function FormField({ label, optional = false, error, children }) {
+  return (
+    <label className="block text-xs font-semibold text-slate-600">
+      <span className="mb-1.5 block">
+        {label}
+        {optional && <span className="ml-1 font-normal text-slate-400">(optional)</span>}
+      </span>
+      {children}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+    </label>
+  );
+}
+
+function ErrorMessage({ children }) {
+  return <span className="mt-1.5 block text-xs font-medium text-red-700">{children}</span>;
+}
+
+function inputClass(hasError) {
+  return `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-[var(--teal)] focus:ring-3 focus:ring-emerald-100 ${
+    hasError ? "border-red-500" : "border-slate-300"
+  }`;
+}
+
+function formatFileSize(size) {
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(0)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
