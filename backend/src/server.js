@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import contractorRoutes from "./routes/contractorRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import { refreshContractorStatus } from "./services/complianceService.js";
 
 dotenv.config();
 
@@ -29,3 +30,9 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(port, () => console.log(`ComplyTrack API listening on port ${port}`));
+
+function refreshAllStatuses() {
+  refreshContractorStatus().catch((error) => console.error("Status refresh failed:", error.message));
+}
+refreshAllStatuses();
+setInterval(refreshAllStatuses, 6 * 60 * 60 * 1000);

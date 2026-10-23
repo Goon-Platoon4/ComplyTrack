@@ -117,7 +117,7 @@ export default function Reports() {
     const counts = {};
 
     for (const document of documents) {
-      const id = String(document.contractor_id);
+      const id = String(document.contractorId);
       counts[id] = (counts[id] || 0) + 1;
     }
 
