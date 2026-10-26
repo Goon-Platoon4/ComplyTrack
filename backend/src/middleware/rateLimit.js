@@ -1,9 +1,9 @@
-const buckets = new Map();
 export function rateLimit({
   windowMs = 900000,
   limit = 10,
   message = "Too many attempts. Try again later.",
 } = {}) {
+  const buckets = new Map();
   return (req, res, next) => {
     const key = `${req.ip || "unknown"}:${req.baseUrl}${req.path}`;
     const now = Date.now();
