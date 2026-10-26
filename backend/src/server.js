@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import expressRateLimit from "express-rate-limit";
 import { rateLimit } from "./middleware/rateLimit.js";
 import contractorRoutes from "./routes/contractorRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
