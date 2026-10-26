@@ -35,7 +35,7 @@ function detectFileType(buffer) {
 export async function uploadDocument(req, res, next) {
   if (!["Administrator", "Compliance Officer"].includes(req.user.role))
     return res.status(403).json({ message: "Insufficient permissions" });
-  const fileBuffer = Buffer.isBuffer(req.body) ? req.body : null;
+  const fileBuffer = Buffer.isBuffer(req.body) ? Buffer.from(req.body) : null;
   if (!fileBuffer?.length)
     return res
       .status(400)

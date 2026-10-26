@@ -7,6 +7,7 @@ import net from "node:net";
 import { timingSafeEqual } from "node:crypto";
 
 const app = express();
+app.use(expressRateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: "draft-7", legacyHeaders: false }));
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.CLAMAV_ADAPTER_PORT || 3311);
