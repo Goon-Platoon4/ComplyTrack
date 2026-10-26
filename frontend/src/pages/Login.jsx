@@ -1,7 +1,15 @@
-
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, LockKeyhole, Mail, Eye, EyeOff } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const features = [
   "Contractor compliance tracking",
@@ -11,127 +19,187 @@ const features = [
 ];
 
 export default function Login() {
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [form, setForm] = useState({ email: "", password: "", mfaCode: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [needsMfa, setNeedsMfa] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      window.location.href = "/dashboard";
-    }, 1000);
-  };
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const user = await signIn({
+        email: form.email,
+        password: form.password,
+        ...(form.mfaCode ? { mfaCode: form.mfaCode } : {}),
+      });
+      navigate(
+        user.role === "Administrator" && !user.mfaEnabled
+          ? "/mfa-setup"
+          : location.state?.from
+            ? `${location.state.from.pathname || "/dashboard"}${location.state.from.search || ""}`
+            : "/dashboard",
+        { replace: true },
+      );
+    } catch (err) {
+      const data = err.response?.data;
+      if (data?.code === "MFA_REQUIRED") {
+        setNeedsMfa(true);
+      }
+      setError(
+        data?.message ||
+          "Unable to sign in. Check your connection and try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-6xl grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl lg:grid-cols-[1.1fr_0.9fr] min-h-0 lg:min-h-[600px]">
-        
-        {/* LEFT PANEL - With Curved Shape */}
-        <section className="relative overflow-hidden bg-[var(--navy)] p-8 sm:p-12 text-white hidden lg:flex flex-col justify-between">
-          
-          {/* The curved shape trick */}
-          <div className="absolute top-0 right-0 w-[150%] h-[120%] bg-white opacity-[0.03] rounded-b-[50%] transform translate-x-1/4 -translate-y-1/4"></div>
-
-          <div className="relative z-10 flex flex-col items-center text-center mt-8">
-            <img 
-              src="/logo.webp" 
-              alt="ComplyTrack" 
-              className="h-28 sm:h-32 w-auto object-contain mb-12 transition-transform duration-300 ease-in-out hover:scale-110 cursor-pointer" 
-              style={{ mixBlendMode: 'screen' }} 
+    <main className="comply-login-page">
+      <div className="comply-login-card">
+        <section className="comply-login-intro">
+          <div className="comply-login-curve" aria-hidden="true" />
+          <div className="comply-login-intro-content">
+            <img
+              src="/logo.webp"
+              alt="ComplyTrack"
+              className="comply-login-logo"
             />
-            
-            <h1 className="mt-3 max-w-lg text-4xl font-extrabold tracking-tight text-[var(--teal-2)] leading-tight">
+            <h1>
               Secure access to the contractor compliance workspace.
             </h1>
-
-            <div className="mt-12 space-y-4 text-left w-full max-w-sm mx-auto">
+            <div className="comply-login-features">
               {features.map((feature, index) => (
-                <div 
-                  key={feature} 
-                  className="flex items-center gap-3 text-sm text-slate-200 opacity-0 animate-[slideIn_0.5s_ease-out_forwards]"
+                <div
+                  className="comply-login-feature"
+                  key={feature}
                   style={{ animationDelay: `${index * 100 + 200}ms` }}
                 >
-                  <CheckCircle2 size={18} className="shrink-0 text-[var(--teal-2)]" />
+                  <CheckCircle2 size={18} aria-hidden="true" />
                   <span>{feature}</span>
                 </div>
               ))}
             </div>
           </div>
-          
-          <div className="relative z-10 mt-12 text-center text-xs text-slate-400">
-             Built for South African organisations By South African developers
-          </div>
+          <p className="comply-login-footer">
+            Built for South African organisations by South African developers
+          </p>
         </section>
 
-        {/* RIGHT PANEL - Form */}
-        <section className="p-6 sm:p-12 flex flex-col justify-center">
-          <div className="mx-auto w-full max-w-md">
-            
-            <div className="lg:hidden flex justify-center mb-8">
-              <img src="/logo.webp" alt="ComplyTrack" className="h-20 w-auto object-contain" style={{ mixBlendMode: 'screen' }} />
-            </div>
+        <section className="comply-login-form-area">
+          <div className="comply-login-mobile-logo">
+            <img src="/logo.webp" alt="ComplyTrack" />
+          </div>
+          <div className="comply-login-form-content">
+            <h2>Sign in</h2>
+            <p className="comply-login-subtitle">
+              Use the account your administrator created.
+            </p>
 
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 text-center lg:text-left">Sign in</h2>
-            <p className="mt-2 text-sm text-slate-500 text-center lg:text-left">Use the account your administrator created.</p>
+            <form onSubmit={submit} className="comply-login-form">
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              )}
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Email address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 text-slate-400" size={18} />
-                  <input type="email" required placeholder="you@company.com" className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[var(--navy)]/20 transition-all" />
-                </div>
-              </div>
+              <label className="comply-login-field">
+                <span>Email address</span>
+                <span className="comply-login-input-wrap">
+                  <Mail size={18} aria-hidden="true" />
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    required
+                    value={form.email}
+                    onChange={(event) =>
+                      setForm({ ...form, email: event.target.value })
+                    }
+                  />
+                </span>
+              </label>
 
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">Password</label>
-                <div className="relative">
-                  <LockKeyhole className="absolute left-3 top-3 text-slate-400" size={18} />
-                  <input type={showPassword ? "text" : "password"} required placeholder="••••••••" className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[var(--navy)]/20 transition-all" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <label className="comply-login-field">
+                <span>Password</span>
+                <span className="comply-login-input-wrap">
+                  <LockKeyhole size={18} aria-hidden="true" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    required
+                    value={form.password}
+                    onChange={(event) =>
+                      setForm({ ...form, password: event.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="comply-login-password-toggle"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={18} aria-hidden="true" />
+                    ) : (
+                      <Eye size={18} aria-hidden="true" />
+                    )}
                   </button>
-                </div>
-              </div>
+                </span>
+              </label>
 
-              <div className="flex items-center justify-between text-xs">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-600">
-                  <input type="checkbox" className="rounded border-slate-300 text-[var(--navy)] focus:ring-[var(--navy)]" />
-                  Remember me
+              {needsMfa && (
+                <label className="comply-login-field">
+                  <span>Authenticator or recovery code</span>
+                  <span className="comply-login-input-wrap">
+                    <ShieldCheck size={18} aria-hidden="true" />
+                    <input
+                      autoComplete="one-time-code"
+                      placeholder="Enter your verification code"
+                      required
+                      value={form.mfaCode}
+                      onChange={(event) =>
+                        setForm({ ...form, mfaCode: event.target.value })
+                      }
+                    />
+                  </span>
                 </label>
-                <a href="#" className="font-semibold text-[var(--navy)] hover:underline">Forgot password?</a>
+              )}
+
+              <div className="comply-login-options">
+                <label>
+                  <input type="checkbox" />
+                  <span>Remember me</span>
+                </label>
+                <Link to="/forgot-password">Forgot password?</Link>
               </div>
 
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="group relative mt-2 flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-[var(--navy)] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[#083525] disabled:opacity-70"
+              <button
+                type="submit"
+                className="comply-login-submit"
+                disabled={busy}
               >
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></span>
-                {isLoading ? "Signing in..." : "Sign in"}
-                {!isLoading && <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />}
+                <span className="comply-login-shimmer" aria-hidden="true" />
+                <span>{busy ? "Signing in..." : "Sign in"}</span>
+                {!busy && <ArrowRight size={17} aria-hidden="true" />}
               </button>
             </form>
 
-            {/* Added the Sign Up link here */}
-            <p className="mt-8 text-center text-sm text-slate-600">
-              Don't have an account? <Link to="/signup" className="font-bold text-[var(--navy)] hover:underline">Sign up</Link>
+            <p className="comply-login-signup">
+              Don&apos;t have an account?{" "}
+              <Link to="/signup">Sign up</Link>
             </p>
-
           </div>
         </section>
       </div>
-
-      <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes shimmer {
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </main>
   );
 }

@@ -1,23 +1,31 @@
-import { Router } from "express";
+import express, { Router } from "express";
+import { requireAuth } from "../middleware/auth.js";
 import {
-  getDocumentTypes,
   getDocuments,
-  getContractorChecklist,
-  getDocumentById,
-  createDocument,
-  updateDocument,
-  deleteDocument,
+  getDocumentHistory,
+  getContractorDocuments,
+  getDocumentDownloadUrl,
 } from "../controllers/documentController.js";
-
+import { uploadDocument } from "../controllers/documentUploadController.js";
 const router = Router();
-
-// Specific paths must come before "/:id", otherwise "types" is treated as an id.
-router.get("/types", getDocumentTypes);
-router.get("/checklist/:contractorId", getContractorChecklist);
+router.use(requireAuth);
 router.get("/", getDocuments);
-router.get("/:id", getDocumentById);
-router.post("/", createDocument);
-router.put("/:id", updateDocument);
-router.delete("/:id", deleteDocument);
-
+router.get("/contractor/:contractorId", getContractorDocuments);
+router.get(
+  "/contractor/:contractorId/type/:documentTypeId/history",
+  getDocumentHistory,
+);
+router.post(
+  "/upload",
+  (req, res, next) => {
+    if (!req.is("application/octet-stream"))
+      return res
+        .status(415)
+        .json({ message: "Upload using application/octet-stream." });
+    next();
+  },
+  express.raw({ type: "application/octet-stream", limit: "10mb" }),
+  uploadDocument,
+);
+router.get("/:id/download-url", getDocumentDownloadUrl);
 export default router;

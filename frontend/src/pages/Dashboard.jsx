@@ -1,60 +1,164 @@
-
-
-
+import { useEffect, useState } from "react";
 import {
+  Activity,
   AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  FileWarning,
-  Plus,
   ArrowUpRight,
   BellRing,
-  Activity,
+  CheckCircle2,
+  Clock3,
   FileCheck2,
-  CircleHelp,
+  FileWarning,
+  Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
+import api from "../services/api";
 
-/* =========================================================
-   DEMO DATA
-   ========================================================= */
-const ATTENTION_DATA = [
-  { id: 1, contractor: "Botha & Sons Construction", doc: "COIDA Letter of Good Standing", expiry: "30 Sep 2026", status: "expired" },
-  { id: 2, contractor: "SecureGuard Bloem (Pty) Ltd", doc: "Tax Compliance Status PIN", expiry: "2 Oct 2026", status: "expiring" },
-  { id: 3, contractor: "Rose City Cleaning Services", doc: "Public liability insurance", expiry: "4 Oct 2026", status: "missing" },
+const emptySummary = {
+  total: 0,
+  compliant: 0,
+  expiring_soon: 0,
+  expired: 0,
+  missing: 0,
+};
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+}
+
+function formatRelativeTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+  const units = [
+    ["year", 60 * 60 * 24 * 365],
+    ["month", 60 * 60 * 24 * 30],
+    ["day", 60 * 60 * 24],
+    ["hour", 60 * 60],
+    ["minute", 60],
+  ];
+  const formatter = new Intl.RelativeTimeFormat(undefined, {
+    numeric: "auto",
+  });
+  for (const [unit, duration] of units) {
+    if (Math.abs(seconds) >= duration) {
+      return formatter.format(Math.round(seconds / duration), unit);
+    }
+  }
+  return formatter.format(seconds, "second");
+}
+
+function formatAction(action) {
+  if (!action) return "Updated organization records";
+  return action
+    .replace(/[._]/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getInitials(name) {
+  return (
+    name
+      ?.trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "SY"
+  );
+}
+
+function getDocumentCoverage(complianceItems) {
+  const coverage = new Map();
+  for (const contractor of complianceItems) {
+    for (const issue of contractor.compliance?.issues || []) {
+      if (!issue.required) continue;
+      const key = issue.documentTypeId || issue.documentType;
+      const item = coverage.get(key) || {
+        type: issue.documentType,
+        valid: 0,
+        required: 0,
+      };
+      item.required += 1;
+      if (issue.status === "Compliant") item.valid += 1;
+      coverage.set(key, item);
+    }
+  }
+  return [...coverage.values()].sort((a, b) => a.type.localeCompare(b.type));
+}
+
+const statusMetrics = [
+  { key: "compliant", label: "Compliant", color: "good" },
+  { key: "expiring_soon", label: "Expiring", color: "warning" },
+  { key: "expired", label: "Expired", color: "danger" },
+  { key: "missing", label: "Missing", color: "neutral" },
 ];
-
-const COVERAGE_DATA = [
-  { type: "Tax Compliance Status PIN", valid: 18, required: 20 },
-  { type: "COIDA Letter of Good Standing", valid: 15, required: 20 },
-  { type: "B-BBEE sworn affidavit", valid: 12, required: 20 },
-  { type: "Public liability insurance", valid: 20, required: 20 },
-];
-
-const ACTIVITY_DATA = [
-  { user: "TN", text: "Uploaded document for Mokoena Electrical", time: "2 hours ago" },
-  { user: "SY", text: "Sent reminder for 7-day expiry", time: "5 hours ago" },
-  { user: "LD", text: "Changed role of P. Nel to Viewer", time: "Yesterday" },
-];
-
-const TREND_DATA = [
-  { month: "May", height: 65 },
-  { month: "Jun", height: 70 },
-  { month: "Jul", height: 75 },
-  { month: "Aug", height: 80 },
-  { month: "Sep", height: 85 },
-  { month: "Oct", height: 92 },
-];
-
 
 export default function Dashboard() {
+  const [summary, setSummary] = useState(emptySummary);
+  const [alerts, setAlerts] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [coverage, setCoverage] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setError("");
+    try {
+      const [summaryResponse, alertResponse, complianceResponse, activityResponse] =
+        await Promise.all([
+          api.get("/reports/summary"),
+          api.get("/operations/alerts"),
+          api.get("/reports/compliance"),
+          api.get("/operations/audit-logs?limit=5"),
+        ]);
+      setSummary(summaryResponse.data);
+      setAlerts(alertResponse.data.items || []);
+      setCoverage(getDocumentCoverage(complianceResponse.data.items || []));
+      setActivity(activityResponse.data || []);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Could not load live dashboard data.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function updateAlert(alertKey, action) {
+    try {
+      await api.post("/operations/alerts/state", { alertKey, action });
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update alert.");
+    }
+  }
+
+  const maxStatusCount = Math.max(
+    ...statusMetrics.map(({ key }) => summary[key] || 0),
+    1,
+  );
+  const expiringAlerts = alerts.filter((alert) => alert.status === "Expiring soon");
+  const nextExpiry = expiringAlerts
+    .map((alert) => alert.expiryDate)
+    .filter(Boolean)
+    .sort()[0];
+
   return (
-    <section className="page dashboard-blueprint pb-12">
-      
-      {/* 1. PAGE HEADER */}
+    <section className="page dashboard-blueprint">
       <PageHeader
         eyebrow="DASHBOARD"
         title="Compliance overview"
@@ -67,24 +171,50 @@ export default function Dashboard() {
         }
       />
 
-      {/* 2. SUMMARY STAT CARDS */}
-      <div className="stats-grid">
-        <StatCard label="Compliant" value="18" helper="Contractors with all required documents valid" status="good" icon={CheckCircle2} trend="↑ 12% vs last month" />
-        <StatCard label="Expiring soon" value="4" helper="Contractors with documents expiring within 30 days" status="warning" icon={Clock3} trend="2 require attention" />
-        <StatCard label="Expired" value="3" helper="Contractors with expired required documents" status="danger" icon={AlertTriangle} trend="↑ 1 since yesterday" />
-        <StatCard label="Missing" value="2" helper="Contractors missing required documents" status="neutral" icon={FileWarning} trend="Connect missing-document checks" />
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      <div className="stats-grid" aria-busy={loading}>
+        <StatCard
+          label="Compliant"
+          value={loading ? "—" : (summary.compliant ?? 0)}
+          helper="Contractors with all required documents valid"
+          status="good"
+          icon={CheckCircle2}
+        />
+        <StatCard
+          label="Expiring soon"
+          value={loading ? "—" : (summary.expiring_soon ?? 0)}
+          helper="Contractors with documents nearing expiry"
+          status="warning"
+          icon={Clock3}
+        />
+        <StatCard
+          label="Expired"
+          value={loading ? "—" : (summary.expired ?? 0)}
+          helper="Contractors with expired required documents"
+          status="danger"
+          icon={AlertTriangle}
+        />
+        <StatCard
+          label="Missing"
+          value={loading ? "—" : (summary.missing ?? 0)}
+          helper="Contractors missing required documents"
+          status="neutral"
+          icon={FileWarning}
+        />
       </div>
 
-      {/* We will use lg:col-span-2 for the wide panels */}
-      <div className="dashboard-grid">
-        
-        {/* ROW 1: Wide + Narrow */}
-
-        {/* 3. NEEDS ATTENTION TABLE (Wide) */}
-        <div className="panel blueprint-panel lg:col-span-2">
+      <div className="dashboard-blueprint-grid">
+        <div className="panel dashboard-blueprint-panel dashboard-blueprint-wide">
           <div className="panel-header">
             <div>
-              <h2><AlertTriangle size={18} /> Needs attention</h2>
+              <h2>
+                <AlertTriangle size={18} /> Needs attention
+              </h2>
               <p>Contractors and documents that require follow-up.</p>
             </div>
             <Link to="/reports" className="link-button">
@@ -92,136 +222,211 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Contractor</th>
-                  <th>Document</th>
-                  <th>Expiry</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ATTENTION_DATA.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                    <td><strong>{row.contractor}</strong></td>
-                    <td>{row.doc}</td>
-                    <td>{row.expiry}</td>
-                    <td><StatusBadge status={row.status} /></td>
-                    <td>
-                      <Link to={`/contractors/${row.id}`} className="table-action">
-                        Review
-                      </Link>
-                    </td>
+          {loading ? (
+            <p className="dashboard-empty-state">Loading compliance alerts…</p>
+          ) : alerts.length === 0 ? (
+            <p className="dashboard-empty-state">
+              No outstanding compliance alerts.
+            </p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contractor</th>
+                    <th>Document</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {alerts.map((item) => (
+                    <tr key={item.key}>
+                      <td>
+                        <Link to={`/contractors/${item.contractorId}`}>
+                          <strong>{item.contractorName}</strong>
+                        </Link>
+                      </td>
+                      <td>{item.documentType}</td>
+                      <td>{formatDate(item.expiryDate)}</td>
+                      <td>
+                        <StatusBadge status={item.status} />
+                      </td>
+                      <td className="dashboard-alert-actions">
+                        <Link
+                          to={`/contractors/${item.contractorId}`}
+                          className="table-action"
+                        >
+                          Review
+                        </Link>
+                        {!item.readAt && (
+                          <button
+                            className="table-action"
+                            onClick={() => updateAlert(item.key, "read")}
+                          >
+                            Mark read
+                          </button>
+                        )}
+                        <button
+                          className="table-action"
+                          onClick={() => updateAlert(item.key, "dismiss")}
+                        >
+                          Dismiss
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* 4. COMPLIANCE TREND (Narrow) */}
-        <div className="panel blueprint-panel">
+        <div className="panel dashboard-blueprint-panel">
           <div className="panel-header">
             <div>
-              <h2><Activity size={18} /> Compliance trend</h2>
-              <p>Compliance performance over the last six months.</p>
+              <h2>
+                <Activity size={18} /> Compliance snapshot
+              </h2>
+              <p>Current contractor status across the organisation.</p>
             </div>
           </div>
-          
-          <div className="mini-chart mt-6 flex items-end gap-2 sm:gap-4 h-48">
-            {TREND_DATA.map((item, i) => (
-              <div key={item.month} className="chart-col group flex-1 flex flex-col items-center justify-end h-full">
-                <div 
-                  className="w-full max-w-[40px] rounded-t-md bg-gradient-to-t from-[var(--navy)] to-[var(--teal-2)] opacity-80 group-hover:opacity-100 transition-all duration-300 animate-rise-up"
-                  style={{ height: `${item.height}%`, animationDelay: `${i * 100}ms` }}
-                ></div>
-                <span className="mt-3 text-xs font-semibold text-slate-500 group-hover:text-[var(--navy)] transition-colors">
-                  {item.month}
-                </span>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <p className="dashboard-empty-state">Loading status summary…</p>
+          ) : (
+            <div className="dashboard-status-chart" aria-label="Contractor status counts">
+              {statusMetrics.map(({ key, label, color }) => {
+                const count = summary[key] || 0;
+                return (
+                  <div className="dashboard-status-column" key={key}>
+                    <strong>{count}</strong>
+                    <div
+                      className={`dashboard-status-bar ${color}`}
+                      style={{
+                        height: `${Math.max((count / maxStatusCount) * 100, 4)}%`,
+                      }}
+                      title={`${label}: ${count}`}
+                    />
+                    <span>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* ROW 2: Wide + Narrow */}
-
-        {/* 5. RECENT ACTIVITY (Wide) */}
-        <div className="panel blueprint-panel lg:col-span-2">
+        <div className="panel dashboard-blueprint-panel dashboard-blueprint-wide">
           <div className="panel-header">
             <div>
-              <h2><Activity size={18} /> Recently updated</h2>
+              <h2>
+                <Activity size={18} /> Recently updated
+              </h2>
               <p>Latest contractor and document activity.</p>
             </div>
             <Link to="/audit-log" className="link-button">
               View audit log <ArrowUpRight size={15} />
             </Link>
           </div>
-          <div className="activity-list">
-            {ACTIVITY_DATA.map((act, i) => (
-              <div key={i} className="activity-row">
-                <div className="activity-avatar">{act.user}</div>
-                <div>
-                  <strong>{act.text}</strong>
-                  <span>{act.time}</span>
+          {loading ? (
+            <p className="dashboard-empty-state">Loading recent activity…</p>
+          ) : activity.length === 0 ? (
+            <p className="dashboard-empty-state">No recent activity to show.</p>
+          ) : (
+            <div className="activity-list">
+              {activity.map((item) => (
+                <div className="activity-row" key={item.id}>
+                  <div className="activity-avatar">
+                    {getInitials(item.actorName)}
+                  </div>
+                  <div>
+                    <strong>
+                      {formatAction(item.action)}
+                      {item.entityType ? ` · ${item.entityType}` : ""}
+                    </strong>
+                    <span>
+                      {item.actorName || "System"} ·{" "}
+                      <time dateTime={item.createdAt}>
+                        {formatRelativeTime(item.createdAt)}
+                      </time>
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* 6. DOCUMENT COVERAGE (Narrow) */}
-        <div className="panel blueprint-panel">
+        <div className="panel dashboard-blueprint-panel">
           <div className="panel-header">
             <div>
-              <h2><FileCheck2 size={18} /> Document coverage</h2>
+              <h2>
+                <FileCheck2 size={18} /> Document coverage
+              </h2>
               <p>Required documents currently valid.</p>
             </div>
           </div>
-          <div className="coverage-list mt-4">
-            {COVERAGE_DATA.map((item, i) => (
-              <div key={item.type} className="coverage-row">
-                <div>
-                  <span>{item.type}</span>
-                  <strong>{item.valid} / {item.required}</strong>
+          {loading ? (
+            <p className="dashboard-empty-state">Loading document coverage…</p>
+          ) : coverage.length === 0 ? (
+            <p className="dashboard-empty-state">
+              No required documents are configured yet.
+            </p>
+          ) : (
+            <div className="coverage-list">
+              {coverage.map((item) => (
+                <div className="coverage-row" key={item.type}>
+                  <div>
+                    <span>{item.type}</span>
+                    <strong>
+                      {item.valid} / {item.required}
+                    </strong>
+                  </div>
+                  <div
+                    className="progress"
+                    role="progressbar"
+                    aria-label={`${item.type} valid documents`}
+                    aria-valuemin={0}
+                    aria-valuemax={item.required}
+                    aria-valuenow={item.valid}
+                  >
+                    <span
+                      style={{
+                        width: `${(item.valid / item.required) * 100}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="progress">
-                  <span 
-                    className="animate-fill-bar"
-                    style={{ 
-                      '--target-width': `${(item.valid / item.required) * 100}%`,
-                      animationDelay: `${i * 150}ms` 
-                    }}
-                  ></span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* ROW 3: Full Width */}
-        
-        {/* 7. REMINDERS (Wide) */}
-        <div className="panel blueprint-panel lg:col-span-2">
+        <div className="panel dashboard-blueprint-panel dashboard-blueprint-wide">
           <div className="panel-header">
             <div>
-              <h2><BellRing size={18} className="animate-pulse text-[var(--teal-2)]" /> Reminders</h2>
-              <p>Document expiry reminder status.</p>
+              <h2>
+                <BellRing size={18} /> Reminders
+              </h2>
+              <p>Expiry reminders based on your compliance rules.</p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
+          <div className="dashboard-reminder-box">
             <div>
-              <strong className="block text-slate-800 text-lg">3 reminders scheduled</strong>
-              <span className="text-slate-500 text-sm">Next run: Tomorrow at 08:00</span>
+              <strong>
+                {loading ? "Loading reminders…" : `${expiringAlerts.length} expiring documents`}
+              </strong>
+              <span>
+                {nextExpiry
+                  ? `Next expiry: ${formatDate(nextExpiry)}`
+                  : "No upcoming document expiries are currently reported."}
+              </span>
             </div>
-            <Link to="/settings" className="secondary-button mt-3 sm:mt-0 inline-block">
-              Configure reminders
+            <Link to="/document-rules" className="secondary-button">
+              Configure document rules
             </Link>
           </div>
         </div>
-
       </div>
     </section>
   );

@@ -4,15 +4,14 @@ import {
   getContractorById,
   createContractor,
   updateContractor,
-  deleteContractor,
+  getContractorComplianceDetails,
 } from "../controllers/contractorController.js";
-
+import { requireAuth } from "../middleware/auth.js";
 const router = Router();
-
+router.use(requireAuth);
 router.get("/", getContractors);
-router.get("/:id", getContractorById);
 router.post("/", createContractor);
-router.put("/:id", updateContractor);
-router.delete("/:id", deleteContractor);
-
+router.get("/:id/compliance", getContractorComplianceDetails);
+router.get("/:id", getContractorById);
+router.patch("/:id", updateContractor);
 export default router;

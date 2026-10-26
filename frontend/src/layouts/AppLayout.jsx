@@ -1,22 +1,26 @@
-
 import { useState } from "react";
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import {
+  BarChart3,
   Bell,
-  Building2,
   FileCheck2,
   FileText,
   LayoutDashboard,
   LogOut,
+  Menu,
   Settings,
   Users,
-  BarChart3,
-  Menu,
   X,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const workspaceNav = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/contractors", label: "Contractors", icon: Users },
   { to: "/reports", label: "Reports", icon: BarChart3 },
 ];
@@ -27,107 +31,92 @@ const adminNav = [
   { to: "/audit-log", label: "Audit log", icon: FileText },
 ];
 
+function getPageName(pathname) {
+  if (pathname === "/dashboard" || pathname === "/") return "Dashboard";
+  if (pathname === "/contractors") return "Contractors";
+  if (pathname.includes("/upload")) return "Upload document";
+  if (pathname.startsWith("/contractors/")) return "Contractor details";
+  if (pathname === "/reports") return "Reports";
+  if (pathname === "/settings") return "Settings";
+  if (pathname === "/document-rules") return "Document rules";
+  if (pathname === "/audit-log") return "Audit log";
+  return "Compliance workspace";
+}
+
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const closeMenu = () => setOpen(false);
+  function closeMenu() {
+    setOpen(false);
+  }
 
-  const getPageName = () => {
-    const path = location.pathname;
-
-    if (path === "/dashboard" || path === "/") return "Dashboard";
-    if (path === "/contractors") return "Contractors";
-    if (path.includes("/upload")) return "Upload document";
-    if (path.startsWith("/contractors/")) return "Contractor details";
-    if (path === "/reports") return "Reports";
-    if (path === "/settings") return "Settings";
-    if (path === "/document-rules") return "Document rules";
-    if (path === "/audit-log") return "Audit log";
-    return "Compliance workspace";
-  };
-
-  const handleLogout = () => {
-    // Connect this to AuthContext when real authentication is implemented.
-    navigate("/login");
+  async function handleSignOut() {
+    await signOut();
+    navigate("/login", { replace: true });
     closeMenu();
-  };
+  }
+
+  function renderNavLink({ to, label, icon: Icon, end }) {
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        end={end}
+        onClick={closeMenu}
+        className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+      >
+        <Icon size={18} aria-hidden="true" />
+        <span>{label}</span>
+      </NavLink>
+    );
+  }
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+      <aside
+        className={`sidebar ${open ? "sidebar-open" : ""}`}
+        aria-label="Application sidebar"
+      >
         <NavLink
           to="/dashboard"
-          className="brand group"
+          className="brand"
           onClick={closeMenu}
           aria-label="ComplyTrack home"
         >
           <img src="/logo.webp" alt="ComplyTrack" className="sidebar-logo" />
         </NavLink>
-        
 
-        <nav className="sidebar-nav" aria-label="Main navigation">
+        <nav
+          id="main-navigation"
+          className="sidebar-nav"
+          aria-label="Main navigation"
+        >
           <div className="nav-section-label">Workspace</div>
-
-          {nav.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `nav-link ${isActive ? "active" : ""}`
-              }
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {workspaceNav.map(renderNavLink)}
 
           <div className="nav-section-label">Administration</div>
-
-          <NavLink
-            to="/contractors"
-            onClick={closeMenu}
-            className={({ isActive }) =>
-              `nav-link ${isActive ? "active" : ""}`
-            }
-          >
-            <Building2 size={18} />
-            <span>Contractor records</span>
-          </NavLink>
-
-          {adminNav.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `nav-link ${isActive ? "active" : ""}`
-              }
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {adminNav.map(renderNavLink)}
         </nav>
 
         <div className="sidebar-footer">
-          <div className="profile-avatar">TN</div>
-
-          <div className="sidebar-profile-details">
-            <strong>Thandi Nkosi</strong>
-            <span>Compliance Officer</span>
+          <div className="profile-avatar" aria-hidden="true">
+            {user?.initials || "CT"}
           </div>
-
+          <div className="profile-details">
+            <strong>{user?.name || "ComplyTrack user"}</strong>
+            <span>{user?.role || "Member"}</span>
+          </div>
           <button
             type="button"
             className="logout-button"
-            onClick={handleLogout}
+            onClick={handleSignOut}
             aria-label="Log out"
             title="Log out"
           >
-            <LogOut size={17} />
+            <LogOut size={17} aria-hidden="true" />
           </button>
         </div>
       </aside>
@@ -149,6 +138,7 @@ export default function AppLayout() {
             onClick={() => setOpen((current) => !current)}
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
+            aria-controls="main-navigation"
           >
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -156,22 +146,22 @@ export default function AppLayout() {
           <div className="breadcrumb">
             <NavLink to="/dashboard">ComplyTrack</NavLink>
             <span>/</span>
-            <span>{getPageName()}</span>
+            <span aria-current="page">{getPageName(location.pathname)}</span>
           </div>
 
           <div className="topbar-actions">
             <button
               type="button"
               className="icon-button"
-              aria-label="Notifications"
+              aria-label="Go to dashboard"
               title="Notifications"
               onClick={() => navigate("/dashboard")}
             >
-              <Bell size={18} />
+              <Bell size={18} aria-hidden="true" />
             </button>
 
-            <div className="topbar-user" title="Thandi Nkosi">
-              TN
+            <div className="topbar-user" title={user?.name || "ComplyTrack user"}>
+              {user?.initials || "CT"}
             </div>
           </div>
         </header>

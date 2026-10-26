@@ -1,126 +1,144 @@
 import { query } from "../db.js";
+import { refreshContractorSnapshot } from "../services/complianceService.js";
+import { toCsv } from "../utils/csv.js";
+import { createTextPdf } from "../services/pdfService.js";
 
-const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
-
-export async function getSummary(_req, res, next) {
+export async function getSummary(req, res, next) {
   try {
-    const result = await query(`
-      SELECT
-        COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE status = 'Compliant')::int AS compliant,
-        COUNT(*) FILTER (WHERE status = 'Expiring soon')::int AS expiring_soon,
-        COUNT(*) FILTER (WHERE status = 'Expired')::int AS expired,
-        COUNT(*) FILTER (WHERE status = 'Missing')::int AS missing
-      FROM contractors
-    `);
-    res.json(result.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-}
-
-// Contractor report with the same filters as the Reports page, including
-// the expiry date range, plus how many documents each contractor has.
-export async function getContractorReport(req, res, next) {
-  try {
-    const { search, status, category, expiryFrom, expiryTo } = req.query;
-    if ((expiryFrom && !isDate(expiryFrom)) || (expiryTo && !isDate(expiryTo))) {
-      return res.status(400).json({ message: "expiryFrom and expiryTo must be YYYY-MM-DD" });
-    }
-
-    const values = [];
-    const where = [];
-
-    if (search) {
-      values.push(`%${search}%`);
-      where.push(`(c.name ILIKE $${values.length} OR c.registration_no ILIKE $${values.length} OR c.contact_name ILIKE $${values.length})`);
-    }
-    if (status) {
-      values.push(status);
-      where.push(`c.status = $${values.length}`);
-    }
-    if (category) {
-      values.push(category);
-      where.push(`c.category = $${values.length}`);
-    }
-    if (expiryFrom) {
-      values.push(expiryFrom);
-      where.push(`c.next_expiry >= $${values.length}`);
-    }
-    if (expiryTo) {
-      values.push(expiryTo);
-      where.push(`c.next_expiry <= $${values.length}`);
-    }
-
-    const result = await query(
-      `SELECT c.id, c.name, c.registration_no AS registration, c.category,
-              c.contact_name AS contact, c.contact_email AS email, c.contact_phone AS phone,
-              c.works_on_site AS "worksOnSite", c.status, c.next_expiry::text AS "nextExpiry",
-              (SELECT COUNT(*)::int FROM documents d WHERE d.contractor_id = c.id) AS "documentCount"
-       FROM contractors c
-       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-       ORDER BY c.name ASC`,
-      values
+    const ids = await query(
+      "SELECT id FROM contractors WHERE organization_id=$1 ORDER BY id",
+      [req.user.organizationId],
     );
-    res.json(result.rows);
-  } catch (error) {
-    next(error);
-  }
-}
-
-// Current documents that expire within the next `days` days (default 30),
-// including ones that have already expired. Older versions of a document that
-// has since been renewed are ignored.
-export async function getExpiringDocuments(req, res, next) {
-  try {
-    const days = req.query.days === undefined ? 30 : Number(req.query.days);
-    if (!Number.isInteger(days) || days < 0 || days > 365) {
-      return res.status(400).json({ message: "days must be a whole number from 0 to 365" });
-    }
-
+    for (const row of ids.rows)
+      await refreshContractorSnapshot(req.user.organizationId, row.id);
     const result = await query(
-      `SELECT * FROM (
-         SELECT DISTINCT ON (d.contractor_id, d.document_type_id)
-                d.id, d.contractor_id AS "contractorId", c.name AS "contractorName",
-                dt.name AS "documentType", d.reference_no AS "referenceNumber",
-                d.expiry_date::text AS "expiryDate",
-                (d.expiry_date - CURRENT_DATE) AS "daysLeft",
-                CASE
-                  WHEN d.expiry_date < CURRENT_DATE THEN 'Expired'
-                  WHEN d.expiry_date <= CURRENT_DATE + 30 THEN 'Expiring soon'
-                  ELSE 'Compliant'
-                END AS status,
-                d.expiry_date AS sort_date
-         FROM documents d
-         JOIN contractors c ON c.id = d.contractor_id
-         JOIN document_types dt ON dt.id = d.document_type_id
-         ORDER BY d.contractor_id, d.document_type_id, d.expiry_date DESC NULLS LAST, d.created_at DESC
-       ) latest
-       WHERE sort_date <= CURRENT_DATE + $1::int
-       ORDER BY sort_date ASC`,
-      [days]
+      `SELECT COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE status='Compliant')::int AS compliant,
+      COUNT(*) FILTER (WHERE status='Expiring soon')::int AS expiring_soon,
+      COUNT(*) FILTER (WHERE status='Expired')::int AS expired,
+      COUNT(*) FILTER (WHERE status='Missing')::int AS missing
+      FROM contractors WHERE organization_id=$1`,
+      [req.user.organizationId],
     );
-    res.json(result.rows.map(({ sort_date: _sortDate, ...row }) => row));
+    return res.json(result.rows[0]);
   } catch (error) {
     next(error);
   }
 }
 
-// Status counts per contractor category.
-export async function getCategoryBreakdown(_req, res, next) {
+export async function getComplianceReport(req, res, next) {
   try {
-    const result = await query(`
-      SELECT category,
-             COUNT(*)::int AS total,
-             COUNT(*) FILTER (WHERE status = 'Compliant')::int AS compliant,
-             COUNT(*) FILTER (WHERE status = 'Expiring soon')::int AS expiring_soon,
-             COUNT(*) FILTER (WHERE status = 'Expired')::int AS expired,
-             COUNT(*) FILTER (WHERE status = 'Missing')::int AS missing
-      FROM contractors
-      GROUP BY category
-      ORDER BY category ASC
-    `);
-    res.json(result.rows);
+    const rows = await getComplianceRows(req);
+    return res.json({
+      generatedAt: new Date().toISOString(),
+      organizationId: req.user.organizationId,
+      count: rows.length,
+      items: rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function exportComplianceCsv(req, res, next) {
+  try {
+    const report = await getComplianceRows(req);
+    const csv = toCsv(
+      [
+        "Contractor",
+        "Registration number",
+        "Category",
+        "Overall status",
+        "Next expiry",
+        "Works on site",
+        "Compliant checks",
+        "Issues",
+      ],
+      report.map((row) => [
+        row.name,
+        row.registration,
+        row.category,
+        row.status,
+        row.nextExpiry,
+        row.worksOnSite ? "Yes" : "No",
+        row.compliance?.compliantCount || 0,
+        row.compliance?.issueCount || 0,
+      ]),
+    );
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="complytrack-compliance-${new Date().toISOString().slice(0, 10)}.csv"`,
+    );
+    return res.send(`\uFEFF${csv}`);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getComplianceRows(req) {
+  const values = [req.user.organizationId];
+  const where = ["c.organization_id=$1"];
+  if (req.query.category) {
+    values.push(String(req.query.category).slice(0, 100));
+    where.push(`c.category=$${values.length}`);
+  }
+  if (req.query.search) {
+    values.push(`%${String(req.query.search).slice(0, 150)}%`);
+    where.push(
+      `(c.name ILIKE $${values.length} OR c.registration_no ILIKE $${values.length} OR c.contact_name ILIKE $${values.length} OR COALESCE(c.contact_email,'') ILIKE $${values.length})`,
+    );
+  }
+  const { rows } = await query(
+    `SELECT c.id,c.name,c.registration_no AS registration,c.category,c.status,c.next_expiry AS "nextExpiry",c.works_on_site AS "worksOnSite" FROM contractors c WHERE ${where.join(" AND ")} ORDER BY c.name`,
+    values,
+  );
+  for (const row of rows) {
+    row.compliance = await refreshContractorSnapshot(
+      req.user.organizationId,
+      row.id,
+    );
+    if (row.compliance) {
+      row.status = row.compliance.status;
+      row.nextExpiry = row.compliance.nextExpiry;
+    }
+  }
+  return req.query.status
+    ? rows.filter((row) => row.status === req.query.status)
+    : rows;
+}
+
+export async function exportCompliancePdf(req, res, next) {
+  try {
+    const rows = await getComplianceRows(req);
+    const totals = rows.reduce((acc, row) => {
+      acc[row.status] = (acc[row.status] || 0) + 1;
+      return acc;
+    }, {});
+    const orgResult = await query(
+      "SELECT name FROM organizations WHERE id=$1",
+      [req.user.organizationId],
+    );
+    const lines = [
+      `Organization: ${orgResult.rows[0]?.name || req.user.organizationId}`,
+      `Organization ID: ${req.user.organizationId}`,
+      `Filters: status=${req.query.status || "all"}, category=${req.query.category || "all"}, search=${req.query.search || "none"}`,
+      `Total contractors: ${rows.length}`,
+      `Compliant: ${totals.Compliant || 0} | Expiring soon: ${totals["Expiring soon"] || 0} | Expired: ${totals.Expired || 0} | Missing: ${totals.Missing || 0}`,
+      "",
+      "CONTRACTOR | REGISTRATION | CATEGORY | STATUS | NEXT EXPIRY | ISSUES",
+      ...rows.map(
+        (row) =>
+          `${row.name} | ${row.registration} | ${row.category} | ${row.status} | ${row.nextExpiry || "-"} | ${row.compliance?.issueCount || 0}`,
+      ),
+    ];
+    const pdf = createTextPdf("ComplyTrack Compliance Report", lines);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="complytrack-compliance-${new Date().toISOString().slice(0, 10)}.pdf"`,
+    );
+    return res.send(pdf);
   } catch (error) {
     next(error);
   }
