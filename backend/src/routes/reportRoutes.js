@@ -1,16 +1,10 @@
-import { Router } from "express";
-import {
-  getSummary,
-  getContractorReport,
-  getExpiringDocuments,
-  getCategoryBreakdown,
-} from "../controllers/reportController.js";
-
+import { Router } from 'express';
+import { getSummary, getComplianceReport, exportComplianceCsv, exportCompliancePdf } from '../controllers/reportController.js';
+import { requireAuth } from '../middleware/auth.js';
 const router = Router();
-
-router.get("/summary", getSummary);
-router.get("/contractors", getContractorReport);
-router.get("/expiring", getExpiringDocuments);
-router.get("/by-category", getCategoryBreakdown);
-
+router.use(requireAuth);
+router.get('/summary', getSummary);
+router.get('/compliance', getComplianceReport);
+router.get('/compliance.csv', exportComplianceCsv);
+router.get('/compliance.pdf', exportCompliancePdf);
 export default router;

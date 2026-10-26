@@ -1,183 +1,120 @@
 import { query } from "../db.js";
-import { refreshContractorStatus } from "../services/complianceService.js";
-
-// Dates are cast to text so they come back as "2026-03-01" instead of
-// shifting a day because of time zones.
-const DOCUMENT_COLUMNS = `
-  d.id, d.contractor_id AS "contractorId", d.document_type_id AS "documentTypeId",
-  dt.name AS "documentType", d.reference_no AS "referenceNumber",
-  d.issue_date::text AS "issueDate", d.expiry_date::text AS "expiryDate",
-  d.file_name AS "fileName", d.notes, d.created_at AS "createdAt", d.updated_at AS "updatedAt"
-`;
-
-const DOCUMENT_STATUS = `
-  CASE
-    WHEN d.expiry_date IS NULL THEN 'Missing'
-    WHEN d.expiry_date < CURRENT_DATE THEN 'Expired'
-    WHEN d.expiry_date <= CURRENT_DATE + 30 THEN 'Expiring soon'
-    ELSE 'Compliant'
-  END
-`;
-
-const isNumericId = (id) => /^\d+$/.test(String(id));
-const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
-
-function validateDocument(body, { requireContractor }) {
-  if (requireContractor && !isNumericId(body.contractorId)) return "contractorId is required";
-  if (!isNumericId(body.documentTypeId)) return "documentTypeId is required";
-  if (!body.expiryDate || !isDate(body.expiryDate)) return "expiryDate is required (YYYY-MM-DD)";
-  if (body.issueDate && !isDate(body.issueDate)) return "issueDate must be YYYY-MM-DD";
-  if (body.issueDate && body.issueDate > body.expiryDate) return "issueDate must be before expiryDate";
-  return null;
-}
-
-async function findDocument(id) {
-  const result = await query(
-    `SELECT ${DOCUMENT_COLUMNS}, ${DOCUMENT_STATUS} AS status
-     FROM documents d
-     JOIN document_types dt ON dt.id = d.document_type_id
-     WHERE d.id = $1`,
-    [id]
-  );
-  return result.rows[0];
-}
-
-export async function getDocumentTypes(_req, res, next) {
-  try {
-    const result = await query(
-      `SELECT id, name, description, required_for_site_work AS "requiredForSiteWork"
-       FROM document_types ORDER BY id`
-    );
-    res.json(result.rows);
-  } catch (error) {
-    next(error);
-  }
-}
+import { refreshContractorSnapshot } from "../services/complianceService.js";
+import { recordAudit } from "../services/auditService.js";
 
 export async function getDocuments(req, res, next) {
   try {
-    const { contractorId } = req.query;
-    if (contractorId && !isNumericId(contractorId)) {
-      return res.status(400).json({ message: "Invalid contractorId" });
+    const values = [req.user.organizationId];
+    let where = "d.organization_id=$1 AND d.is_current=TRUE";
+    if (req.query.contractorId) {
+      values.push(req.query.contractorId);
+      where += ` AND d.contractor_id=$${values.length}`;
     }
-
-    const values = contractorId ? [contractorId] : [];
-    const result = await query(
-      `SELECT ${DOCUMENT_COLUMNS}, ${DOCUMENT_STATUS} AS status
-       FROM documents d
-       JOIN document_types dt ON dt.id = d.document_type_id
-       ${contractorId ? "WHERE d.contractor_id = $1" : ""}
-       ORDER BY d.expiry_date ASC NULLS FIRST`,
-      values
+    if (req.query.scanStatus) {
+      values.push(req.query.scanStatus);
+      where += ` AND d.scan_status=$${values.length}`;
+    }
+    const { rows } = await query(
+      `SELECT d.id,d.contractor_id AS "contractorId",d.document_type_id AS "documentTypeId",d.reference_no AS "referenceNo",
+      d.issue_date AS "issueDate",d.expiry_date AS "expiryDate",d.file_name AS "fileName",d.mime_type AS "mimeType",d.file_size_bytes AS "fileSizeBytes",
+      d.version_number AS "versionNumber",d.scan_status AS "scanStatus",d.uploaded_at AS "uploadedAt",d.notes,dt.name AS "documentType",
+      CASE WHEN d.scan_status <> 'clean' THEN 'Unavailable' WHEN r.expiry_tracked=FALSE THEN 'Compliant' WHEN d.expiry_date IS NULL THEN 'Compliant'
+        WHEN d.expiry_date < (NOW() AT TIME ZONE o.timezone)::date THEN 'Expired'
+        WHEN r.reminder_days>0 AND d.expiry_date <= (NOW() AT TIME ZONE o.timezone)::date + r.reminder_days THEN 'Expiring soon' ELSE 'Compliant' END AS status
+      FROM documents d JOIN contractors c ON c.id=d.contractor_id AND c.organization_id=d.organization_id
+      JOIN document_types dt ON dt.id=d.document_type_id JOIN organizations o ON o.id=d.organization_id
+      LEFT JOIN compliance_rules r ON r.organization_id=d.organization_id AND r.document_type_id=d.document_type_id
+      WHERE ${where} ORDER BY d.expiry_date ASC NULLS FIRST,d.uploaded_at DESC`,
+      values,
     );
-    res.json(result.rows);
+    return res.json(rows);
   } catch (error) {
     next(error);
   }
 }
 
-// Every required document type for one contractor, including ones never uploaded.
-export async function getContractorChecklist(req, res, next) {
+export async function getDocumentHistory(req, res, next) {
   try {
-    const { contractorId } = req.params;
-    if (!isNumericId(contractorId)) return res.status(400).json({ message: "Invalid contractor id" });
-
-    const contractor = await query("SELECT works_on_site FROM contractors WHERE id = $1", [contractorId]);
-    if (!contractor.rows[0]) return res.status(404).json({ message: "Contractor not found" });
-
-    const result = await query(
-      `SELECT dt.id AS "documentTypeId", dt.name AS "documentType",
-              d.id AS "documentId", d.reference_no AS "referenceNumber",
-              d.issue_date::text AS "issueDate", d.expiry_date::text AS "expiryDate",
-              d.file_name AS "fileName",
-              ${DOCUMENT_STATUS} AS status
-       FROM document_types dt
-       LEFT JOIN LATERAL (
-         SELECT * FROM documents
-         WHERE contractor_id = $1 AND document_type_id = dt.id
-         ORDER BY expiry_date DESC NULLS LAST, created_at DESC
-         LIMIT 1
-       ) d ON TRUE
-       WHERE NOT dt.required_for_site_work OR $2
-       ORDER BY dt.id`,
-      [contractorId, contractor.rows[0].works_on_site]
+    const { rows } = await query(
+      `SELECT d.id,d.contractor_id AS "contractorId",d.document_type_id AS "documentTypeId",d.reference_no AS "referenceNo",
+      d.issue_date AS "issueDate",d.expiry_date AS "expiryDate",d.file_name AS "fileName",d.mime_type AS "mimeType",d.file_size_bytes AS "fileSizeBytes",
+      d.version_number AS "versionNumber",d.is_current AS "isCurrent",d.scan_status AS "scanStatus",d.uploaded_at AS "uploadedAt",d.notes,u.full_name AS "uploadedBy"
+      FROM documents d LEFT JOIN users u ON u.id=d.uploaded_by WHERE d.organization_id=$1 AND d.contractor_id=$2 AND d.document_type_id=$3 ORDER BY d.version_number DESC`,
+      [
+        req.user.organizationId,
+        req.params.contractorId,
+        req.params.documentTypeId,
+      ],
     );
-    res.json(result.rows);
+    return res.json(rows);
   } catch (error) {
     next(error);
   }
 }
 
-export async function getDocumentById(req, res, next) {
-  try {
-    if (!isUuid(req.params.id)) return res.status(400).json({ message: "Invalid document id" });
-
-    const document = await findDocument(req.params.id);
-    if (!document) return res.status(404).json({ message: "Document not found" });
-    res.json(document);
-  } catch (error) {
-    next(error);
-  }
+export async function createDocumentMetadata(req, res, next) {
+  if (!["Administrator", "Compliance Officer"].includes(req.user.role))
+    return res.status(403).json({ message: "Insufficient permissions" });
+  // Metadata-only uploads are intentionally not published. The storage/scanner pipeline must call the finalization service.
+  return res
+    .status(501)
+    .json({
+      message:
+        "Document upload requires configured private storage and malware scanning. No document was saved.",
+    });
 }
 
-export async function createDocument(req, res, next) {
+export async function getContractorDocuments(req, res, next) {
   try {
-    const error = validateDocument(req.body, { requireContractor: true });
-    if (error) return res.status(400).json({ message: error });
-
-    const { contractorId, documentTypeId, referenceNumber, issueDate, expiryDate, fileName, notes } = req.body;
-    const result = await query(
-      `INSERT INTO documents
-         (contractor_id, document_type_id, reference_no, issue_date, expiry_date, file_name, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id`,
-      [contractorId, documentTypeId, referenceNumber || null, issueDate || null, expiryDate, fileName || null, notes || null]
+    const contractor = await query(
+      "SELECT id FROM contractors WHERE organization_id=$1 AND id=$2",
+      [req.user.organizationId, req.params.contractorId],
     );
-
-    await refreshContractorStatus(contractorId);
-    res.status(201).json(await findDocument(result.rows[0].id));
-  } catch (error) {
-    if (error.code === "23503") return res.status(400).json({ message: "Contractor or document type does not exist" });
-    next(error);
-  }
-}
-
-export async function updateDocument(req, res, next) {
-  try {
-    if (!isUuid(req.params.id)) return res.status(400).json({ message: "Invalid document id" });
-
-    const error = validateDocument(req.body, { requireContractor: false });
-    if (error) return res.status(400).json({ message: error });
-
-    const { documentTypeId, referenceNumber, issueDate, expiryDate, fileName, notes } = req.body;
+    if (!contractor.rowCount)
+      return res.status(404).json({ message: "Contractor not found" });
     const result = await query(
-      `UPDATE documents
-       SET document_type_id = $1, reference_no = $2, issue_date = $3, expiry_date = $4,
-           file_name = $5, notes = $6, updated_at = NOW()
-       WHERE id = $7
-       RETURNING contractor_id`,
-      [documentTypeId, referenceNumber || null, issueDate || null, expiryDate, fileName || null, notes || null, req.params.id]
+      `SELECT r.document_type_id AS "documentTypeId",dt.name AS "documentType",r.is_required AS required,
+      r.required_for_site_work AS "requiredForSiteWork",r.expiry_tracked AS "expiryTracked",r.reminder_days AS "reminderDays",
+      d.id AS "documentId",d.expiry_date AS "expiryDate",d.version_number AS "versionNumber",d.scan_status AS "scanStatus"
+      FROM compliance_rules r JOIN document_types dt ON dt.id=r.document_type_id
+      LEFT JOIN documents d ON d.organization_id=r.organization_id AND d.contractor_id=$2 AND d.document_type_id=r.document_type_id AND d.is_current=TRUE AND d.scan_status='clean'
+      WHERE r.organization_id=$1 AND r.is_active=TRUE ORDER BY dt.name`,
+      [req.user.organizationId, req.params.contractorId],
     );
-    if (!result.rows[0]) return res.status(404).json({ message: "Document not found" });
-
-    await refreshContractorStatus(result.rows[0].contractor_id);
-    res.json(await findDocument(req.params.id));
+    const compliance = await refreshContractorSnapshot(
+      req.user.organizationId,
+      req.params.contractorId,
+    );
+    return res.json({ items: result.rows, compliance });
   } catch (error) {
-    if (error.code === "23503") return res.status(400).json({ message: "Document type does not exist" });
     next(error);
   }
 }
 
-export async function deleteDocument(req, res, next) {
+export async function getDocumentDownloadUrl(req, res, next) {
   try {
-    if (!isUuid(req.params.id)) return res.status(400).json({ message: "Invalid document id" });
-
-    const result = await query("DELETE FROM documents WHERE id = $1 RETURNING contractor_id", [req.params.id]);
-    if (!result.rows[0]) return res.status(404).json({ message: "Document not found" });
-
-    await refreshContractorStatus(result.rows[0].contractor_id);
-    res.status(204).send();
+    const { rows } = await query(
+      `SELECT id,storage_key,file_name,scan_status FROM documents WHERE organization_id=$1 AND id=$2`,
+      [req.user.organizationId, req.params.id],
+    );
+    if (!rows.length)
+      return res.status(404).json({ message: "Document not found" });
+    if (rows[0].scan_status !== "clean" || !rows[0].storage_key)
+      return res
+        .status(423)
+        .json({ message: "Document is not available for download." });
+    const { createSignedDownloadUrl } =
+      await import("../services/storageService.js");
+    const url = await createSignedDownloadUrl(rows[0].storage_key);
+    await recordAudit({
+      organizationId: req.user.organizationId,
+      actorUserId: req.user.id,
+      action: "document.download_url_created",
+      entityType: "document",
+      entityId: rows[0].id,
+      req,
+    });
+    return res.json({ url, fileName: rows[0].file_name, expiresInSeconds: 60 });
   } catch (error) {
     next(error);
   }

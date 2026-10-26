@@ -1,317 +1,134 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FileCheck2,
-  Plus,
-  Search,
-  Pencil,
-  ShieldCheck,
-  Clock3,
-  FileWarning,
-  X,
-  CheckCircle2,
   AlertCircle,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  FileWarning,
+  Pencil,
+  Plus,
   Power,
-  ClipboardList,
-  ChevronRight,
   RotateCcw,
+  Search,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader";
-
-const initialRules = [
-  {
-    id: 1,
-    name: "Tax Compliance Status PIN",
-    category: "Tax",
-    required: true,
-    expiryTracked: true,
-    reminderDays: 30,
-    active: true,
-  },
-  {
-    id: 2,
-    name: "COIDA Letter of Good Standing",
-    category: "Health & Safety",
-    required: true,
-    expiryTracked: true,
-    reminderDays: 30,
-    active: true,
-  },
-  {
-    id: 3,
-    name: "B-BBEE Certificate / Affidavit",
-    category: "Business Compliance",
-    required: true,
-    expiryTracked: true,
-    reminderDays: 30,
-    active: true,
-  },
-  {
-    id: 4,
-    name: "Public Liability Insurance",
-    category: "Insurance",
-    required: true,
-    expiryTracked: true,
-    reminderDays: 30,
-    active: true,
-  },
-  {
-    id: 5,
-    name: "OHS Act s37(2) Agreement",
-    category: "Health & Safety",
-    required: true,
-    expiryTracked: false,
-    reminderDays: 0,
-    active: true,
-  },
-];
-
-const categories = [
-  "Tax",
-  "Health & Safety",
-  "Business Compliance",
-  "Insurance",
-  "Company Registration",
-  "Other",
-];
+import StatCard from "../components/StatCard";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 const emptyForm = {
-  name: "",
-  category: "Tax",
+  documentTypeName: "",
+  category: "Other",
   required: true,
+  requiredForSiteWork: false,
   expiryTracked: true,
   reminderDays: "30",
 };
 
-function StatCard({ title, value, description, icon: Icon, color }) {
-  const colors = {
-    teal: "bg-teal-50 text-teal-700 ring-teal-100",
-    blue: "bg-blue-50 text-blue-700 ring-blue-100",
-    amber: "bg-amber-50 text-amber-700 ring-amber-100",
-    violet: "bg-violet-50 text-violet-700 ring-violet-100",
-  };
-
+function RuleStatus({ active }) {
   return (
-    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-
-          <p className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
-            {value}
-          </p>
-
-          <p className="mt-2 text-sm leading-5 text-slate-500">
-            {description}
-          </p>
-        </div>
-
-        <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ring-1 ${colors[color]}`}
-        >
-          <Icon size={22} strokeWidth={1.8} />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function StatusPill({ active }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-        active
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
-          : "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          active ? "bg-emerald-500" : "bg-slate-400"
-        }`}
-      />
+    <span className={`document-rule-status ${active ? "active" : "inactive"}`}>
+      <span aria-hidden="true" />
       {active ? "Active" : "Inactive"}
     </span>
   );
 }
 
-function RequirementPill({ required }) {
+function RequirementStatus({ required }) {
   return (
     <span
-      className={`inline-flex whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold ${
-        required
-          ? "bg-blue-50 text-blue-700"
-          : "bg-slate-100 text-slate-600"
-      }`}
+      className={`document-rule-requirement ${required ? "required" : "optional"}`}
     >
       {required ? "Required" : "Optional"}
     </span>
   );
 }
 
-function Toggle({ checked, onChange, title, description }) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-5 py-4">
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-slate-800">
-          {title}
-        </span>
-
-        <span className="mt-1.5 block text-sm leading-6 text-slate-500">
-          {description}
-        </span>
-      </span>
-
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="peer sr-only"
-      />
-
-      <span
-        aria-hidden="true"
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
-          after:absolute after:left-1 after:top-1 after:h-4 after:w-4
-          after:rounded-full after:bg-white after:shadow-sm after:transition-transform
-          peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-teal-100
-          ${
-            checked
-              ? "bg-teal-600 after:translate-x-5"
-              : "bg-slate-300"
-          }`}
-      />
-    </label>
-  );
-}
-
 function RuleForm({
   form,
   setForm,
-  editingId,
+  editingRule,
   onSave,
   onCancel,
   error,
+  busy,
 }) {
-  const update = (name, value) => {
+  function update(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
-  };
+  }
 
   return (
-    <form
-      onSubmit={onSave}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-    >
-      <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-6 sm:px-8">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-            {editingId === null ? <Plus size={22} /> : <Pencil size={20} />}
-          </div>
-
+    <form className="panel document-rule-form" onSubmit={onSave} aria-busy={busy}>
+      <div className="document-rule-form-header">
+        <div className="document-rule-form-title">
+          <span className="document-rule-form-icon">
+            {editingRule ? <Pencil size={20} /> : <Plus size={21} />}
+          </span>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              {editingId === null ? "Add document rule" : "Edit document rule"}
-            </h2>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Define the document requirement and how its expiry should be
+            <h2>{editingRule ? "Edit document rule" : "Add document rule"}</h2>
+            <p>
+              Define which documents are required and how expiry should be
               managed.
             </p>
           </div>
         </div>
-
         <button
           type="button"
+          className="document-rule-close"
           onClick={onCancel}
-          className="rounded-xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           aria-label="Close rule form"
         >
-          <X size={20} />
+          <X size={19} />
         </button>
       </div>
 
-      <div className="space-y-7 p-6 sm:p-8">
+      <div className="document-rule-form-body">
         {error && (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800"
-          >
-            <AlertCircle size={19} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <p className="form-error" role="alert">
+            {error}
+          </p>
         )}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <label className="block">
-            <span className="mb-2.5 block text-sm font-semibold text-slate-700">
-              Document name <span className="text-red-500">*</span>
-            </span>
-
+        <div className="document-rule-fields">
+          <label>
+            <span>Document name</span>
             <input
               autoFocus
-              value={form.name}
-              onChange={(event) => update("name", event.target.value)}
-              placeholder="e.g. Professional indemnity insurance"
-              maxLength={120}
               required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+              maxLength={150}
+              value={form.documentTypeName}
+              disabled={Boolean(editingRule)}
+              onChange={(event) =>
+                update("documentTypeName", event.target.value)
+              }
+              placeholder="e.g. Professional indemnity insurance"
             />
+            {editingRule && (
+              <small>
+                Document names cannot be changed after a rule is created.
+              </small>
+            )}
           </label>
-
-          <label className="block">
-            <span className="mb-2.5 block text-sm font-semibold text-slate-700">
-              Category <span className="text-red-500">*</span>
-            </span>
-
-            <select
+          <label>
+            <span>Category</span>
+            <input
+              required
+              maxLength={100}
               value={form.category}
               onChange={(event) => update("category", event.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 sm:px-6">
-          <div className="border-b border-slate-200">
-            <Toggle
-              title="Required document"
-              description="Contractors must provide this document to meet the configured requirement."
-              checked={form.required}
-              onChange={(value) => update("required", value)}
+              placeholder="e.g. Insurance"
             />
-          </div>
-
-          <Toggle
-            title="Track expiry date"
-            description="Use the document's expiry date to identify upcoming renewals and expired documents."
-            checked={form.expiryTracked}
-            onChange={(value) => update("expiryTracked", value)}
-          />
-        </div>
-
-        <div className="max-w-xl">
-          <label className="block">
-            <span className="mb-2.5 block text-sm font-semibold text-slate-700">
-              Expiry reminder period
-            </span>
-
-            <div className="relative">
-              <Clock3
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
+          </label>
+          <label>
+            <span>Expiry reminder period</span>
+            <span className="document-rule-reminder-input">
+              <Clock3 size={17} aria-hidden="true" />
               <input
                 type="number"
-                min="1"
+                min="0"
                 max="365"
                 step="1"
                 disabled={!form.expiryTracked}
@@ -320,38 +137,80 @@ function RuleForm({
                   update("reminderDays", event.target.value)
                 }
                 required={form.expiryTracked}
-                className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-28 text-sm outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               />
-
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">
-                days before
-              </span>
-            </div>
-
-            <span className="mt-2.5 block text-sm leading-6 text-slate-500">
-              {form.expiryTracked
-                ? "Choose how many days before expiry a reminder should be scheduled."
-                : "Enable expiry tracking to configure reminders."}
+              <span>days before</span>
             </span>
+            <small>
+              {form.expiryTracked
+                ? "Set to 0 to turn off advance reminders."
+                : "Enable expiry tracking to configure reminders."}
+            </small>
+          </label>
+        </div>
+
+        <div className="document-rule-options">
+          <label className="document-rule-toggle-row">
+            <span>
+              <strong>Required document</strong>
+              <small>
+                Contractors must provide this document to meet the configured
+                requirement.
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.required}
+              onChange={(event) => update("required", event.target.checked)}
+            />
+          </label>
+          <label className="document-rule-toggle-row">
+            <span>
+              <strong>Required for on-site work</strong>
+              <small>
+                Require this document for contractors who work on site.
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.requiredForSiteWork}
+              onChange={(event) =>
+                update("requiredForSiteWork", event.target.checked)
+              }
+            />
+          </label>
+          <label className="document-rule-toggle-row">
+            <span>
+              <strong>Track expiry date</strong>
+              <small>
+                Use expiry dates to identify upcoming renewals and expired
+                documents.
+              </small>
+            </span>
+            <input
+              type="checkbox"
+              checked={form.expiryTracked}
+              onChange={(event) => update("expiryTracked", event.target.checked)}
+            />
           </label>
         </div>
       </div>
 
-      <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
+      <div className="document-rule-form-actions">
         <button
           type="button"
+          className="secondary-button"
           onClick={onCancel}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+          disabled={busy}
         >
           Cancel
         </button>
-
-        <button
-          type="submit"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
-        >
+        <button className="primary-button" disabled={busy}>
           <CheckCircle2 size={17} />
-          {editingId === null ? "Create rule" : "Save changes"}
+          {busy
+            ? "Saving…"
+            : editingRule
+              ? "Save changes"
+              : "Create rule"}
         </button>
       </div>
     </form>
@@ -359,100 +218,160 @@ function RuleForm({
 }
 
 export default function DocumentRules() {
-  const [rules, setRules] = useState(initialRules);
+  const { user } = useAuth();
+  const [rules, setRules] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [editingRule, setEditingRule] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [message, setMessage] = useState("");
+  const isAdmin = user?.role === "Administrator";
+
+  async function loadRules() {
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await api.get("/rules");
+      const rows = Array.isArray(data) ? data : data?.items;
+      if (!Array.isArray(rows)) {
+        throw new Error("The compliance rules response was not a list.");
+      }
+      setRules(
+        rows.map((rule) => {
+          const documentType = rule?.documentType ?? rule?.document_type;
+          if (
+            !rule ||
+            typeof documentType !== "string" ||
+            typeof rule.category !== "string"
+          ) {
+            throw new Error("A compliance rule is missing its name or category.");
+          }
+          return {
+            ...rule,
+            documentType,
+            category: rule.category,
+            required: Boolean(rule.required ?? rule.is_required),
+            requiredForSiteWork: Boolean(
+              rule.requiredForSiteWork ?? rule.required_for_site_work,
+            ),
+            expiryTracked: Boolean(rule.expiryTracked ?? rule.expiry_tracked),
+            reminderDays: Number(rule.reminderDays ?? rule.reminder_days ?? 0),
+            active: Boolean(rule.active ?? rule.is_active),
+          };
+        }),
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Unable to load compliance rules.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRules();
+  }, []);
+
+  const categories = useMemo(
+    () =>
+      [...new Set(rules.map((rule) => rule.category).filter(Boolean))].sort(
+        (first, second) => first.localeCompare(second),
+      ),
+    [rules],
+  );
 
   const stats = useMemo(
     () => [
       {
-        title: "Total rules",
+        label: "Total rules",
         value: rules.length,
-        description: "All configured requirements",
-        icon: ClipboardList,
-        color: "blue",
-      },
-      {
-        title: "Active rules",
-        value: rules.filter((rule) => rule.active).length,
-        description: "Currently enabled rules",
-        icon: ShieldCheck,
-        color: "teal",
-      },
-      {
-        title: "Required rules",
-        value: rules.filter((rule) => rule.active && rule.required).length,
-        description: "Active mandatory documents",
+        helper: "All configured requirements",
+        status: "neutral",
         icon: FileCheck2,
-        color: "violet",
       },
       {
-        title: "Expiry tracked",
+        label: "Active rules",
+        value: rules.filter((rule) => rule.active).length,
+        helper: "Currently enabled rules",
+        status: "good",
+        icon: ShieldCheck,
+      },
+      {
+        label: "Required rules",
+        value: rules.filter((rule) => rule.active && rule.required).length,
+        helper: "Active mandatory documents",
+        status: "warning",
+        icon: CheckCircle2,
+      },
+      {
+        label: "Expiry tracked",
         value: rules.filter((rule) => rule.active && rule.expiryTracked).length,
-        description: "Active rules with expiry tracking",
+        helper: "Active rules with expiry tracking",
+        status: "danger",
         icon: Clock3,
-        color: "amber",
       },
     ],
-    [rules]
+    [rules],
   );
 
   const filteredRules = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     return rules
       .filter((rule) => {
         const matchesSearch =
-          rule.name.toLowerCase().includes(query) ||
-          rule.category.toLowerCase().includes(query);
-
+          String(rule.documentType || "").toLowerCase().includes(query) ||
+          String(rule.category || "").toLowerCase().includes(query);
         const matchesStatus =
           filter === "all" ||
           (filter === "active" && rule.active) ||
           (filter === "inactive" && !rule.active) ||
           (filter === "required" && rule.required);
-
         const matchesCategory =
           categoryFilter === "all" || rule.category === categoryFilter;
-
         return matchesSearch && matchesStatus && matchesCategory;
       })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((first, second) =>
+        String(first.documentType || "").localeCompare(
+          String(second.documentType || ""),
+        ),
+      );
   }, [rules, search, filter, categoryFilter]);
 
   function resetForm() {
     setForm({ ...emptyForm });
-    setEditingId(null);
-    setError("");
+    setEditingRule(null);
+    setFormError("");
   }
 
   function openNewRule() {
     resetForm();
     setMessage("");
+    setError("");
     setShowForm(true);
   }
 
   function openEditRule(rule) {
-    setEditingId(rule.id);
-
+    setEditingRule(rule);
     setForm({
-      name: rule.name,
-      category: categories.includes(rule.category)
-        ? rule.category
-        : "Other",
+      documentTypeName: rule.documentType,
+      category: rule.category,
       required: rule.required,
+      requiredForSiteWork: rule.requiredForSiteWork,
       expiryTracked: rule.expiryTracked,
-      reminderDays: String(rule.reminderDays || 30),
+      reminderDays: String(rule.reminderDays ?? 0),
     });
-
-    setError("");
+    setFormError("");
     setMessage("");
+    setError("");
     setShowForm(true);
   }
 
@@ -461,104 +380,90 @@ export default function DocumentRules() {
     resetForm();
   }
 
-  function saveRule(event) {
+  async function saveRule(event) {
     event.preventDefault();
-    setError("");
+    setFormError("");
     setMessage("");
 
-    const name = form.name.trim();
+    const documentTypeName = form.documentTypeName.trim();
     const category = form.category.trim();
     const reminderDays = Number(form.reminderDays);
-
-    if (!name || !category) {
-      setError("Please enter a document name and select a category.");
+    if (!documentTypeName || !category) {
+      setFormError("Please enter a document name and category.");
       return;
     }
-
-    if (name.length > 120) {
-      setError("The document name must be 120 characters or fewer.");
-      return;
-    }
-
     if (
       form.expiryTracked &&
       (!Number.isInteger(reminderDays) ||
-        reminderDays < 1 ||
+        reminderDays < 0 ||
         reminderDays > 365)
     ) {
-      setError("The reminder period must be a whole number between 1 and 365.");
+      setFormError("Reminder days must be a whole number between 0 and 365.");
       return;
     }
 
-    const duplicate = rules.some(
-      (rule) =>
-        rule.name.trim().toLowerCase() === name.toLowerCase() &&
-        rule.id !== editingId
-    );
-
-    if (duplicate) {
-      setError("A rule with this document name already exists.");
-      return;
-    }
-
-    const ruleData = {
-      name,
-      category,
-      required: form.required,
-      expiryTracked: form.expiryTracked,
-      reminderDays: form.expiryTracked ? reminderDays : 0,
-    };
-
-    if (editingId !== null) {
-      setRules((current) =>
-        current.map((rule) =>
-          rule.id === editingId ? { ...rule, ...ruleData } : rule
-        )
+    setBusy(true);
+    try {
+      if (editingRule) {
+        await api.patch(`/rules/${editingRule.id}`, {
+          category,
+          required: form.required,
+          requiredForSiteWork: form.requiredForSiteWork,
+          expiryTracked: form.expiryTracked,
+          reminderDays: form.expiryTracked ? reminderDays : 0,
+        });
+        setMessage("Rule updated. Contractor compliance has been recalculated.");
+      } else {
+        await api.post("/rules", {
+          documentTypeName,
+          category,
+          required: form.required,
+          requiredForSiteWork: form.requiredForSiteWork,
+          expiryTracked: form.expiryTracked,
+          reminderDays: form.expiryTracked ? reminderDays : 0,
+        });
+        setMessage("Compliance rule created.");
+      }
+      setShowForm(false);
+      resetForm();
+      await loadRules();
+    } catch (err) {
+      setFormError(
+        err.response?.data?.message ||
+          (editingRule ? "Unable to update rule." : "Unable to create rule."),
       );
-
-      setMessage("Document rule updated successfully.");
-    } else {
-      setRules((current) => {
-        const nextId =
-          current.reduce((maxId, rule) => Math.max(maxId, rule.id), 0) + 1;
-
-        return [...current, { id: nextId, ...ruleData, active: true }];
-      });
-
-      setMessage("Document rule created successfully.");
+    } finally {
+      setBusy(false);
     }
-
-    setShowForm(false);
-    resetForm();
   }
 
-  function toggleRule(id) {
-    const rule = rules.find((item) => item.id === id);
-
-    if (!rule) return;
-
+  async function toggleRule(rule) {
+    const active = !rule.active;
+    setError("");
+    setMessage("");
     if (
       rule.active &&
       !window.confirm(
-        `Disable "${rule.name}"? The rule will remain in the list but will be marked inactive.`
+        `Disable "${rule.documentType}"? The rule will remain in the list but will be marked inactive.`,
       )
     ) {
       return;
     }
-
-    setRules((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, active: !item.active } : item
-      )
-    );
-
-    setMessage(
-      rule.active
-        ? `"${rule.name}" has been disabled.`
-        : `"${rule.name}" has been enabled.`
-    );
-
-    setError("");
+    try {
+      await api.patch(`/rules/${rule.id}`, { active });
+      setRules((current) =>
+        current.map((item) =>
+          item.id === rule.id ? { ...item, active } : item,
+        ),
+      );
+      setMessage(
+        active
+          ? `"${rule.documentType}" has been enabled.`
+          : `"${rule.documentType}" has been disabled.`,
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update rule.");
+    }
   }
 
   function clearFilters() {
@@ -568,428 +473,295 @@ export default function DocumentRules() {
   }
 
   return (
-    <section className="mx-auto w-full min-w-0 max-w-[1800px] space-y-7 px-4 pb-10 pt-5 sm:space-y-8 sm:px-6 sm:pt-7 lg:px-8 xl:px-10">
-      {/* Page heading */}
-      <div className="space-y-5">
-        <PageHeader
-          eyebrow="Administration"
-          title="Document rules"
-          description="Define the documents contractors must provide and how expiry warnings are handled."
-          actions={
+    <section className="page document-rules-page">
+      <PageHeader
+        eyebrow="ADMINISTRATION"
+        title="Document rules"
+        description="Define the documents contractors must provide and how expiry warnings are handled."
+        actions={
+          isAdmin && (
             <button
               type="button"
+              className="primary-button"
               onClick={openNewRule}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
             >
-              <Plus size={18} />
+              <Plus size={17} />
               Add document rule
             </button>
-          }
-        />
-      </div>
+          )
+        }
+      />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 2xl:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
-      </div>
-
-      {/* Success message */}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
       {message && !showForm && (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm leading-6 text-emerald-800"
-        >
-          <CheckCircle2 size={19} className="mt-0.5 shrink-0" />
-
-          <span className="flex-1">{message}</span>
-
+        <div className="document-rules-message" role="status">
+          <CheckCircle2 size={18} />
+          <span>{message}</span>
           <button
             type="button"
             onClick={() => setMessage("")}
             aria-label="Dismiss message"
-            className="rounded-lg p-1 hover:bg-emerald-100"
           >
             <X size={17} />
           </button>
         </div>
       )}
 
-      {/* Add/edit form */}
+      <div className="stats-grid document-rules-stats" aria-busy={loading}>
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.label}
+            {...stat}
+            value={loading ? "—" : stat.value}
+          />
+        ))}
+      </div>
+
       {showForm && (
         <RuleForm
           form={form}
           setForm={setForm}
-          editingId={editingId}
+          editingRule={editingRule}
           onSave={saveRule}
           onCancel={closeForm}
-          error={error}
+          error={formError}
+          busy={busy}
         />
       )}
 
-      {/* Rules management */}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {/* Table heading */}
-        <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-7">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">
-              Configured requirements
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Search, filter, edit and manage your document rules.
-            </p>
+      <section className="panel document-rules-panel">
+        <div className="document-rules-panel-heading">
+          <div>
+            <h2>Configured requirements</h2>
+            <p>Search, filter, edit, and manage your document rules.</p>
           </div>
-
-          <span className="w-fit shrink-0 rounded-lg bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-600">
+          <span className="document-rules-count">
             {filteredRules.length} of {rules.length} rules
           </span>
         </div>
 
-        {/* Search and filters */}
-        <div className="grid grid-cols-1 gap-4 border-b border-slate-100 bg-slate-50/70 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-[minmax(240px,1fr)_180px_210px_auto]">
-          <label className="relative block min-w-0">
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
+        <div className="document-rules-filters">
+          <label className="document-rules-search">
+            <span className="sr-only">Search document rules</span>
+            <Search size={17} aria-hidden="true" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search document name or category..."
-              aria-label="Search document rules"
-              className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+              placeholder="Search document name or category"
+              type="search"
             />
           </label>
-
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            aria-label="Filter by rule status"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-700 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="required">Required</option>
-          </select>
-
-          <select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            aria-label="Filter by category"
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-700 outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
-          >
-            <option value="all">All categories</option>
-
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-
+          <label>
+            <span className="sr-only">Filter by rule status</span>
+            <select
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="required">Required</option>
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">Filter by category</span>
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="all">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
+            className="secondary-button document-rules-reset"
             onClick={clearFilters}
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={15} />
             Reset filters
           </button>
         </div>
 
-        {/* Desktop table */}
-        <div className="hidden min-w-0 overflow-x-auto lg:block">
-          <table className="w-full min-w-275 table-fixed border-collapse text-left">
-            <colgroup>
-              <col className="w-[25%]" />
-              <col className="w-[15%]" />
-              <col className="w-[12%]" />
-              <col className="w-[14%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[14%]" />
-            </colgroup>
-
-            <thead>
-              <tr className="border-b border-slate-100 bg-white">
-                {[
-                  "Document",
-                  "Category",
-                  "Requirement",
-                  "Expiry tracking",
-                  "Reminder",
-                  "Status",
-                  "Actions",
-                ].map((heading) => (
-                  <th
-                    key={heading}
-                    className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 first:pl-7 last:pr-7"
-                  >
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {filteredRules.map((rule) => (
-                <tr
-                  key={rule.id}
-                  className="transition-colors hover:bg-slate-50/80"
-                >
-                  <td className="px-4 py-5 align-middle first:pl-7">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                        <FileCheck2 size={19} />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="wrap-break-word text-sm font-semibold leading-6 text-slate-800">
-                          {rule.name}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          Rule #{rule.id}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="wrap-break-word px-4 py-5 text-sm leading-6 text-slate-600">
-                    {rule.category}
-                  </td>
-
-                  <td className="px-4 py-5">
-                    <RequirementPill required={rule.required} />
-                  </td>
-
-                  <td className="px-4 py-5">
-                    <span className="inline-flex items-center gap-2 text-sm text-slate-600">
-                      {rule.expiryTracked ? (
-                        <CheckCircle2
-                          size={16}
-                          className="shrink-0 text-teal-600"
-                        />
-                      ) : (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-slate-300" />
+        {loading ? (
+          <p className="document-rules-empty" role="status">
+            Loading document rules…
+          </p>
+        ) : filteredRules.length === 0 ? (
+          <div className="document-rules-empty">
+            <FileWarning size={28} aria-hidden="true" />
+            <strong>No matching document rules</strong>
+            <span>
+              {rules.length
+                ? "Try another search term or clear your filters."
+                : "No document rules have been configured for this organization."}
+            </span>
+            {(search || filter !== "all" || categoryFilter !== "all") && (
+              <button
+                type="button"
+                className="table-action"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="table-wrap document-rules-table-wrap">
+              <table className="document-rules-table">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th>Category</th>
+                    <th>Requirement</th>
+                    <th>Site work</th>
+                    <th>Expiry tracking</th>
+                    <th>Reminder</th>
+                    <th>Status</th>
+                    {isAdmin && <th>Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRules.map((rule) => (
+                    <tr key={rule.id}>
+                      <td>
+                        <strong className="document-rules-name">
+                          {rule.documentType}
+                        </strong>
+                      </td>
+                      <td>{rule.category}</td>
+                      <td>
+                        <RequirementStatus required={rule.required} />
+                      </td>
+                      <td>{rule.requiredForSiteWork ? "Required" : "—"}</td>
+                      <td>{rule.expiryTracked ? "Tracked" : "Not tracked"}</td>
+                      <td>
+                        {rule.expiryTracked
+                          ? `${rule.reminderDays} days`
+                          : "—"}
+                      </td>
+                      <td>
+                        <RuleStatus active={rule.active} />
+                      </td>
+                      {isAdmin && (
+                        <td>
+                          <div className="document-rules-actions">
+                            <button
+                              type="button"
+                              className="document-rules-action"
+                              onClick={() => openEditRule(rule)}
+                              aria-label={`Edit ${rule.documentType}`}
+                            >
+                              <Pencil size={14} />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className={`document-rules-action ${rule.active ? "disable" : "enable"}`}
+                              onClick={() => toggleRule(rule)}
+                              aria-label={`${rule.active ? "Disable" : "Enable"} ${rule.documentType}`}
+                            >
+                              <Power size={14} />
+                              {rule.active ? "Disable" : "Enable"}
+                            </button>
+                          </div>
+                        </td>
                       )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                      {rule.expiryTracked ? "Tracked" : "Not tracked"}
+            <div className="document-rules-mobile-list">
+              {filteredRules.map((rule) => (
+                <article className="document-rule-mobile-card" key={rule.id}>
+                  <div className="document-rule-mobile-title">
+                    <span className="document-rule-mobile-icon">
+                      <FileCheck2 size={19} />
                     </span>
-                  </td>
-
-                  <td className="whitespace-nowrap px-4 py-5 text-sm text-slate-600">
-                    {rule.expiryTracked ? `${rule.reminderDays} days` : "—"}
-                  </td>
-
-                  <td className="px-4 py-5">
-                    <StatusPill active={rule.active} />
-                  </td>
-
-                  <td className="px-4 py-5 last:pr-7">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div>
+                      <strong>{rule.documentType}</strong>
+                      <span>{rule.category}</span>
+                    </div>
+                    <RuleStatus active={rule.active} />
+                  </div>
+                  <div className="document-rule-mobile-meta">
+                    <div>
+                      <span>Requirement</span>
+                      <RequirementStatus required={rule.required} />
+                    </div>
+                    <div>
+                      <span>On-site work</span>
+                      <strong>
+                        {rule.requiredForSiteWork ? "Required" : "—"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Expiry tracking</span>
+                      <strong>
+                        {rule.expiryTracked
+                          ? `${rule.reminderDays}-day reminder`
+                          : "Not tracked"}
+                      </strong>
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div className="document-rule-mobile-actions">
                       <button
                         type="button"
+                        className="document-rules-action"
                         onClick={() => openEditRule(rule)}
-                        aria-label={`Edit ${rule.name}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
                       >
                         <Pencil size={14} />
                         Edit
                       </button>
-
                       <button
                         type="button"
-                        onClick={() => toggleRule(rule.id)}
-                        aria-label={`${rule.active ? "Disable" : "Enable"} ${rule.name}`}
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
-                          rule.active
-                            ? "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        }`}
+                        className={`document-rules-action ${rule.active ? "disable" : "enable"}`}
+                        onClick={() => toggleRule(rule)}
                       >
                         <Power size={14} />
                         {rule.active ? "Disable" : "Enable"}
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  )}
+                </article>
               ))}
-
-              {filteredRules.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-7 py-20 text-center">
-                    <Search
-                      size={30}
-                      className="mx-auto text-slate-300"
-                    />
-
-                    <p className="mt-4 text-sm font-semibold text-slate-800">
-                      No matching document rules
-                    </p>
-
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Try another search term or clear your filters.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="mt-4 text-sm font-semibold text-teal-700 hover:text-teal-900"
-                    >
-                      Clear filters
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile and tablet rule cards */}
-        <div className="divide-y divide-slate-100 lg:hidden">
-          {filteredRules.map((rule) => (
-            <article
-              key={rule.id}
-              className="space-y-5 p-5 sm:p-6"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                  <FileCheck2 size={20} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <h3 className="wrap-break-word text-sm font-bold leading-6 text-slate-900 sm:text-base">
-                    {rule.name}
-                  </h3>
-
-                  <p className="mt-1.5 text-sm text-slate-500">
-                    {rule.category} · Rule #{rule.id}
-                  </p>
-
-                  <div className="mt-3">
-                    <StatusPill active={rule.active} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <div>
-                  <p className="text-xs font-medium text-slate-500">
-                    Requirement
-                  </p>
-
-                  <div className="mt-2">
-                    <RequirementPill required={rule.required} />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-slate-500">
-                    Expiry tracking
-                  </p>
-
-                  <p className="mt-2 text-sm font-semibold text-slate-700">
-                    {rule.expiryTracked
-                      ? `${rule.reminderDays}-day reminder`
-                      : "Not tracked"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => openEditRule(rule)}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Pencil size={15} />
-                  Edit rule
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => toggleRule(rule.id)}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Power size={15} />
-                  {rule.active ? "Disable rule" : "Enable rule"}
-                </button>
-              </div>
-            </article>
-          ))}
-
-          {filteredRules.length === 0 && (
-            <div className="px-6 py-16 text-center">
-              <FileWarning
-                size={30}
-                className="mx-auto text-slate-300"
-              />
-
-              <p className="mt-4 text-sm font-semibold text-slate-800">
-                No matching rules
-              </p>
-
-              <p className="mt-2 text-sm text-slate-500">
-                Adjust your search or filters to see more results.
-              </p>
-
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-4 text-sm font-semibold text-teal-700"
-              >
-                Clear filters
-              </button>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
-        {/* Table footer */}
-        <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <p className="text-sm text-slate-500">
-            Showing{" "}
-            <span className="font-semibold text-slate-700">
-              {filteredRules.length}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-slate-700">
-              {rules.length}
-            </span>{" "}
-            rules
-          </p>
-
-          <Link
-            to="/settings"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition hover:text-teal-900"
-          >
-            Manage organisation settings
-            <ChevronRight size={16} />
+        <div className="document-rules-footer">
+          <span>
+            Showing {filteredRules.length} of {rules.length} rules
+          </span>
+          <Link to="/settings">
+            Manage organization settings <span aria-hidden="true">›</span>
           </Link>
         </div>
       </section>
 
-      {/* Help panel */}
-      <aside className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-          <AlertCircle size={20} />
-        </div>
-
-        <div className="min-w-0">
-          <h3 className="text-sm font-bold text-slate-900 sm:text-base">
-            How document rules work
-          </h3>
-
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Active rules define the requirements the application should apply
-            when checking contractor documents. Required rules identify
-            mandatory documents, while expiry tracking supports renewal
-            monitoring. The backend must enforce these rules for them to affect
-            actual compliance results.
+      <aside className="document-rules-help">
+        <span className="document-rules-help-icon">
+          <AlertCircle size={19} aria-hidden="true" />
+        </span>
+        <div>
+          <h3>How document rules work</h3>
+          <p>
+            Active rules define the requirements applied when checking
+            contractor documents. Required rules identify mandatory documents,
+            while expiry tracking supports renewal monitoring. Compliance
+            results are recalculated by the backend when a rule changes.
           </p>
         </div>
       </aside>

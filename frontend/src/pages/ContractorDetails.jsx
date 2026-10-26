@@ -1,276 +1,222 @@
-import {
-  ArrowLeft,
-  Bell,
-  Building2,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  FileCheck2,
-  FileText,
-  History,
-  Mail,
-  Phone,
-  ShieldCheck,
-  Upload,
-  UserRound,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
+import { ArrowLeft, Building2, FileText, Upload } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
-import { contractors, getComplianceStatus, requiredDocuments } from "../data/contractors";
-
+import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 export default function ContractorDetails() {
   const { id } = useParams();
-  const contractor = contractors.find(
-    (item) => item.id === id || item.id === `CNT-${id.padStart(3, "0")}`
-  );
-
-  if (!contractor) {
+  const { user } = useAuth();
+  const [contractor, setContractor] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      api.get(`/contractors/${id}`),
+      api.get(`/documents/contractor/${id}`),
+    ])
+      .then(([c, d]) => {
+        if (active) {
+          setContractor(c.data);
+          setDocuments(d.data.items || []);
+        }
+      })
+      .catch((err) => {
+        if (active)
+          setError(
+            err.response?.data?.message || "Unable to load contractor details.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+  if (loading)
     return (
       <section className="page">
-        <Link to="/contractors" className="link-button mb-5">
-          <ArrowLeft size={15} />
-          Back to contractors
-        </Link>
-        <div className="panel">
-          <h1 className="text-xl font-bold">Contractor not found</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            There is no contractor record matching this ID.
-          </p>
-        </div>
+        <p>Loading contractor…</p>
       </section>
     );
-  }
-
-  const counts = contractor.documents.reduce(
-    (result, document) => {
-      result[document.status] = (result[document.status] || 0) + 1;
-      return result;
-    },
-    {}
-  );
-  const validCount = counts.Valid || 0;
-  const complianceScore = Math.round((validCount / requiredDocuments.length) * 100);
-  const status = getComplianceStatus(contractor);
-
+  if (error || !contractor)
+    return (
+      <section className="page">
+        <p className="form-error">{error || "Contractor not found."}</p>
+        <Link to="/contractors">Back to contractors</Link>
+      </section>
+    );
+  const compliance = contractor.compliance;
   return (
-    <section className="page space-y-5">
-      <Link to="/contractors" className="link-button">
-        <ArrowLeft size={15} />
-        Back to contractors
-      </Link>
-
-      <div className="panel">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-[var(--teal)]">
-              <Building2 size={23} />
-            </div>
-            <div className="min-w-0">
-              <div className="eyebrow">Contractor profile</div>
-              <h1 className="break-words text-2xl font-bold tracking-tight">{contractor.name}</h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Registration {contractor.regNo} <span className="mx-2">·</span> ID {contractor.id}
-              </p>
-              <div className="mt-3">
-                <StatusBadge status={status} />
-              </div>
-            </div>
-          </div>
-          <Link to={`/contractors/${contractor.id}/upload`} className="primary-button shrink-0">
-            <Upload size={16} />
-            Upload document
+    <section className="page">
+      <div className="blueprint-back">
+        <Link to="/contractors">
+          <ArrowLeft size={16} /> Back to contractors
+        </Link>
+      </div>
+      <div className="page-header">
+        <div>
+          <span className="eyebrow">CONTRACTOR PROFILE</span>
+          <h1>
+            <Building2 size={24} /> {contractor.name}
+          </h1>
+          <p>
+            {contractor.registration} · {contractor.category}
+          </p>
+        </div>
+        {user?.role !== "Read-only Auditor" && (
+          <Link className="primary-button" to={`/contractors/${id}/upload`}>
+            <Upload size={16} /> Upload document
           </Link>
+        )}
+      </div>
+      <div className="stats-grid">
+        <div className="panel">
+          <span className="muted-label">Overall compliance</span>
+          <h2>
+            <StatusBadge status={contractor.status} />
+          </h2>
+        </div>
+        <div className="panel">
+          <span className="muted-label">Compliant checks</span>
+          <h2>{compliance?.compliantCount ?? 0}</h2>
+        </div>
+        <div className="panel">
+          <span className="muted-label">Outstanding issues</span>
+          <h2>{compliance?.issueCount ?? 0}</h2>
+        </div>
+        <div className="panel">
+          <span className="muted-label">Next expiry</span>
+          <h2>{contractor.nextExpiry || "—"}</h2>
         </div>
       </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.4fr_0.8fr]">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2><UserRound size={17} /> Contractor information</h2>
-              <p>Company and primary contact details.</p>
-            </div>
+      <div className="panel">
+        <h2>Contractor information</h2>
+        <div className="detail-grid">
+          <div>
+            <span>Contact</span>
+            <strong>{contractor.contact || "—"}</strong>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <InfoField label="Company name" value={contractor.name} />
-            <InfoField label="Registration number" value={contractor.regNo} />
-            <InfoField label="Service category" value={contractor.category} />
-            <InfoField label="Contact person" value={contractor.contactPerson} />
-            <InfoField label="Email" value={contractor.email} icon={Mail} />
-            <InfoField label="Phone" value={contractor.phone} icon={Phone} />
-            <InfoField label="Works on site" value={contractor.worksOnSite ? "Yes" : "No"} />
-            <InfoField label="Contract start" value={contractor.contractStart} icon={CalendarDays} />
-            <InfoField label="Contract end" value={contractor.contractEnd} icon={CalendarDays} />
+          <div>
+            <span>Email</span>
+            <strong>{contractor.email || "—"}</strong>
           </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2><ShieldCheck size={17} /> Compliance score</h2>
-              <p>Based on required documents currently valid.</p>
-            </div>
+          <div>
+            <span>Phone</span>
+            <strong>{contractor.phone || "—"}</strong>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <div className="flex items-end justify-between gap-3">
-              <strong className="text-4xl font-extrabold tracking-tight text-[var(--navy)]">{complianceScore}%</strong>
-              <span className="pb-1 text-sm text-slate-500">{validCount} of {requiredDocuments.length} valid</span>
-            </div>
-            <div
-              className="progress mt-4"
-              role="progressbar"
-              aria-label="Compliance score"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={complianceScore}
-            >
-              <span style={{ width: `${complianceScore}%` }} />
-            </div>
+          <div>
+            <span>Works on site</span>
+            <strong>{contractor.worksOnSite ? "Yes" : "No"}</strong>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <MiniStat label="Expiring soon" value={counts["Expiring soon"] || 0} icon={Clock3} />
-            <MiniStat label="Expired" value={counts.Expired || 0} icon={FileCheck2} />
-            <MiniStat label="Missing" value={counts.Missing || 0} icon={FileText} />
-            <MiniStat label="Overall status" value={status} icon={CheckCircle2} />
+          <div>
+            <span>Contract start</span>
+            <strong>{contractor.contractStart || "—"}</strong>
           </div>
-        </section>
+          <div>
+            <span>Contract end</span>
+            <strong>{contractor.contractEnd || "—"}</strong>
+          </div>
+        </div>
       </div>
-
-      <section className="panel">
+      <div className="panel">
         <div className="panel-header">
           <div>
-            <h2><FileCheck2 size={17} /> Required documents</h2>
-            <p>Document validity and renewal dates for this contractor.</p>
+            <h2>
+              <FileText size={18} /> Required documents
+            </h2>
+            <p>Each requirement and the current verified version.</p>
           </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Status</th>
-                <th>Reference</th>
-                <th>Issued</th>
-                <th>Expiry</th>
-                <th>File</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contractor.documents.map((document) => (
-                <tr key={document.name}>
-                  <td><strong>{document.name}</strong></td>
-                  <td><StatusBadge status={document.status} /></td>
-                  <td>{document.reference || "—"}</td>
-                  <td>{document.issued || "—"}</td>
-                  <td>{document.expiry || "—"}</td>
-                  <td>{document.file || "Not uploaded"}</td>
+        {!compliance?.issues?.length ? (
+          <p>
+            No active compliance rules have been configured for this
+            organization.
+          </p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Document type</th>
+                  <th>Required</th>
+                  <th>Status</th>
+                  <th>Expiry</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2><History size={17} /> Activity</h2>
-              <p>Recent updates to this contractor record.</p>
-            </div>
-          </div>
-          {contractor.activity.length ? (
-            <div className="activity-list">
-              {contractor.activity.map((item) => (
-                <div key={`${item.action}-${item.date}`} className="activity-row">
-                  <div className="activity-avatar">{item.user === "System" ? "SY" : initials(item.user)}</div>
-                  <div>
-                    <strong>{item.action}</strong>
-                    <span>{item.user} · {item.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState>No activity has been recorded for this contractor.</EmptyState>
-          )}
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <h2><Bell size={17} /> Reminder history</h2>
-              <p>Sent and scheduled document expiry reminders.</p>
-            </div>
-          </div>
-          {contractor.reminders.length ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Document</th>
-                    <th>Sent</th>
-                    <th>Due</th>
-                    <th>Channel</th>
-                    <th>Status</th>
+              </thead>
+              <tbody>
+                {compliance.issues.map((issue) => (
+                  <tr key={issue.ruleId}>
+                    <td>{issue.documentType}</td>
+                    <td>{issue.required ? "Yes" : "No"}</td>
+                    <td>
+                      <StatusBadge status={issue.status} />
+                    </td>
+                    <td>{issue.expiryDate || "—"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {contractor.reminders.map((reminder) => (
-                    <tr key={`${reminder.document}-${reminder.sent}`}>
-                      <td><strong>{reminder.document}</strong></td>
-                      <td>{reminder.sent}</td>
-                      <td>{reminder.due}</td>
-                      <td>{reminder.channel}</td>
-                      <td><StatusBadge status={reminder.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <EmptyState>No reminders have been sent or scheduled.</EmptyState>
-          )}
-        </section>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <div className="panel">
+        <h2>Current document records</h2>
+        {documents.length === 0 ? (
+          <p>No clean current document versions are available yet.</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Version</th>
+                  <th>Expiry</th>
+                  <th>Scan status</th>
+                  <th>File</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc) => (
+                  <tr key={doc.documentId || doc.id}>
+                    <td>{doc.documentType}</td>
+                    <td>{doc.versionNumber || 1}</td>
+                    <td>{doc.expiryDate || "—"}</td>
+                    <td>{doc.scanStatus || "clean"}</td>
+                    <td>
+                      <button
+                        className="table-action"
+                        onClick={async () => {
+                          try {
+                            const { data } = await api.get(
+                              `/documents/${doc.documentId || doc.id}/download-url`,
+                            );
+                            window.open(
+                              data.url,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          } catch (e) {
+                            setError(
+                              e.response?.data?.message ||
+                                "Unable to open document.",
+                            );
+                          }
+                        }}
+                      >
+                        Open securely
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </section>
   );
-}
-
-function InfoField({ label, value, icon: Icon }) {
-  return (
-    <div>
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
-      <div className="flex min-h-10 items-center gap-2 text-sm font-medium text-slate-700">
-        {Icon && <Icon size={15} className="shrink-0 text-slate-400" />}
-        <span className="break-all">{value}</span>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value, icon: Icon }) {
-  return (
-    <div className="rounded-lg border border-slate-200 p-3">
-      <div className="flex items-center gap-2 text-slate-500">
-        <Icon size={14} />
-        <span className="text-[10px] font-semibold uppercase tracking-wide">{label}</span>
-      </div>
-      <strong className="mt-2 block text-base">{value}</strong>
-    </div>
-  );
-}
-
-function EmptyState({ children }) {
-  return <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">{children}</p>;
-}
-
-function initials(name) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }

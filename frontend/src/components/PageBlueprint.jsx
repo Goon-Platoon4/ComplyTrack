@@ -26,9 +26,7 @@ export default function PageBlueprint({
         </div>
 
         <div>
-          <span className="blueprint-kicker">
-            DEVELOPMENT BLUEPRINT
-          </span>
+          <span className="blueprint-kicker">DEVELOPMENT BLUEPRINT</span>
 
           <h2>{title}</h2>
 
@@ -37,7 +35,6 @@ export default function PageBlueprint({
       </div>
 
       <div className="blueprint-grid">
-
         {/* PAGE SECTIONS */}
         <div className="blueprint-card">
           <div className="blueprint-card-header">
@@ -48,9 +45,7 @@ export default function PageBlueprint({
           <ul>
             {sections.map((item, index) => (
               <li key={index}>
-                <span className="blueprint-number">
-                  {index + 1}
-                </span>
+                <span className="blueprint-number">{index + 1}</span>
 
                 <div>
                   <strong>{item.name}</strong>
@@ -165,7 +160,6 @@ export default function PageBlueprint({
             ))}
           </ul>
         </div>
-
       </div>
 
       <div className="blueprint-warning">
@@ -175,10 +169,9 @@ export default function PageBlueprint({
           <strong>This is a development blueprint</strong>
 
           <p>
-            Use this section as the implementation checklist for this
-            page. The existing UI below is the visual foundation.
-            Do not remove the existing UI unless the team agrees to
-            change the design.
+            Use this section as the implementation checklist for this page. The
+            existing UI below is the visual foundation. Do not remove the
+            existing UI unless the team agrees to change the design.
           </p>
         </div>
       </div>
