@@ -12,8 +12,7 @@ const MIGRATION_LOCK_KEY = 72419031;
 // Safety guard: this runner is currently restricted to the verified
 // ComplyTrack restore-test endpoint. Change this deliberately only when
 // preparing a separately reviewed deployment procedure.
-const EXPECTED_TEST_HOST =
-  "ep-divine-dust-b6wat14v.c-2.sa-east-1.aws.neon.tech";
+const CONFIRMED_HOST = process.env.MIGRATE_CONFIRM_HOST;
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -24,10 +23,10 @@ async function main() {
 
   const databaseHost = new URL(databaseUrl).hostname;
 
-  if (databaseHost !== EXPECTED_TEST_HOST) {
+  if (!CONFIRMED_HOST || databaseHost !== CONFIRMED_HOST) {
     throw new Error(
-      "Migration blocked: DATABASE_URL does not point to the approved " +
-        "complytrack-restore-test endpoint.",
+      `Migration blocked: set MIGRATE_CONFIRM_HOST=${databaseHost} to confirm ` +
+        "this is the database you intend to migrate.",
     );
   }
 
