@@ -407,6 +407,37 @@ export async function login(req, res, next) {
       [email],
     );
     const user = rows[0];
+      if (user) {
+      // FR-01: 5 failed sign-ins within 15 minutes lock the account for 15
+      // minutes. Failures before the user's last successful sign-in are ignored.
+      const failures = await query(
+        `SELECT COUNT(*)::int AS count, MIN(created_at) AS first_failure, MAX(created_at) AS last_failure
+         FROM (
+           SELECT created_at FROM audit_logs
+           WHERE actor_user_id = $1 AND action = 'auth.login_failed'
+             AND created_at > NOW() - INTERVAL '30 minutes'
+             AND created_at > COALESCE((SELECT MAX(created_at) FROM auth_sessions WHERE user_id = $1), '-infinity')
+           ORDER BY created_at DESC
+           LIMIT 5
+         ) recent`,
+        [user.id],
+      );
+      const { count, first_failure, last_failure } = failures.rows[0];
+      const lockedUntil = last_failure ? new Date(last_failure).getTime() + 15 * 60 * 1000 : 0;
+      if (
+        count >= 5 &&
+        new Date(last_failure) - new Date(first_failure) <= 15 * 60 * 1000 &&
+        Date.now() < lockedUntil
+      ) {
+        await query(
+          `INSERT INTO audit_logs (actor_user_id,action,entity_type,metadata) VALUES ($1,'auth.login_locked','user',$2::jsonb)`,
+          [user.id, JSON.stringify({ lockedUntil: new Date(lockedUntil).toISOString() })],
+        );
+        return res.status(423).json({
+          message: "This account is locked for 15 minutes after 5 failed sign-in attempts.",
+        });
+      }
+    }
     const valid = user?.password_hash
       ? await verifyPassword(password, user.password_hash)
       : false;
