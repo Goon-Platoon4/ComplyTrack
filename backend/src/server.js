@@ -36,6 +36,16 @@ app.use(
 );
 app.use(express.json({ limit: "1mb", strict: true }));
 app.use(express.urlencoded({ extended: false, limit: "16kb" }));
+// General limit for every route; sign-in routes also have a stricter limit.
+app.use(
+  expressRateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 1000,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { message: "Too many requests. Try again later." },
+  }),
+);
 app.use((req, res, next) => {
   req.requestId = randomUUID();
   res.setHeader("X-Request-Id", req.requestId);

@@ -9,7 +9,7 @@ import { query, pool } from "../db.js";
 import { createOpaqueToken, hashToken } from "../utils/crypto.js";
 import { sendTransactionalEmail } from "../services/emailService.js";
 
-const EMAIL_RE = ^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const PASSWORD_MIN = 12;
 const COMMON_PASSWORDS = new Set([
   "password123456",

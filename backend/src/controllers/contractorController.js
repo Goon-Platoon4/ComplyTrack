@@ -115,7 +115,7 @@ export async function createContractor(req, res, next) {
         message:
           "Name, registration number, category, and contact name are required.",
       });
-  if (email && !^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email))
+  if (email && !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email))
     return res.status(400).json({ message: "Contact email is invalid." });
   if (typeof worksOnSite !== "boolean")
     return res.status(400).json({ message: "worksOnSite must be a boolean." });
@@ -197,7 +197,7 @@ export async function updateContractor(req, res, next) {
       .status(400)
       .json({ message: "Required contractor fields cannot be empty." });
   const updated = Object.fromEntries(entries);
-  if (updated.email && !^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(updated.email))
+  if (updated.email && !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(updated.email))
     return res.status(400).json({ message: "Contact email is invalid." });
   if (
     updated.worksOnSite !== undefined &&

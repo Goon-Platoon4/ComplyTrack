@@ -278,7 +278,7 @@ export async function updateOrganizationSettings(req, res, next) {
     (typeof name !== "string" || !name.trim() || name.length > 180)
   )
     return res.status(400).json({ message: "Organization name is required." });
-  if (contactEmail && !^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(contactEmail))
+  if (contactEmail && !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(contactEmail))
     return res.status(400).json({ message: "Contact email is invalid." });
   if (timezone !== undefined) {
     try {
@@ -389,7 +389,7 @@ export async function createInvitation(req, res, next) {
       : "";
   const role = req.body?.role;
   if (
-    !^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email) ||
+    !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email) ||
     !["Compliance Officer", "Read-only Auditor"].includes(role)
   )
     return res
