@@ -559,7 +559,179 @@ export async function login(req, res, next) {
   }
 }
 
+export async function verifyMfaLogin(req, res, next) {
+  const client = await pool.connect();
 
+  try {
+    const { challengeToken, code } = req.body || {};
+
+    if (
+      typeof challengeToken !== "string" ||
+      typeof code !== "string" ||
+      challengeToken.length < 20 ||
+      code.length < 6 ||
+      code.length > 128
+    ) {
+      return res.status(400).json({
+        message: "Enter your authenticator or recovery code.",
+      });
+    }
+
+    await client.query("BEGIN");
+
+    const challengeResult = await client.query(
+      `SELECT id, user_id, organization_id
+       FROM mfa_login_challenges
+       WHERE token_hash = $1
+         AND consumed_at IS NULL
+         AND expires_at > NOW()
+       FOR UPDATE`,
+      [hashToken(challengeToken)],
+    );
+
+    if (!challengeResult.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "Your verification session has expired. Please sign in again.",
+        code: "MFA_CHALLENGE_EXPIRED",
+      });
+    }
+
+    const challenge = challengeResult.rows[0];
+
+    const userResult = await client.query(
+      `SELECT *
+       FROM users
+       WHERE id = $1
+         AND is_active = TRUE
+         AND email_verified_at IS NOT NULL
+       FOR UPDATE`,
+      [challenge.user_id],
+    );
+
+    if (!userResult.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "This account cannot complete verification. Please sign in again.",
+        code: "MFA_CHALLENGE_INVALID",
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    const membershipResult = await client.query(
+      `SELECT m.organization_id, m.role
+       FROM organization_memberships m
+       JOIN organizations o ON o.id = m.organization_id
+       WHERE m.user_id = $1
+         AND m.organization_id = $2
+         AND m.status = 'active'
+         AND o.status = 'active'
+       FOR UPDATE OF m`,
+      [user.id, challenge.organization_id],
+    );
+
+    if (
+      !membershipResult.rowCount ||
+      membershipResult.rows[0].role !== "Administrator" ||
+      !user.mfa_enabled
+    ) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "MFA verification is no longer available for this account.",
+        code: "MFA_CHALLENGE_INVALID",
+      });
+    }
+
+    const membership = membershipResult.rows[0];
+    let validMfa = false;
+    let usedRecoveryCode = false;
+
+    if (/^\d{6}$/.test(code) && user.mfa_secret_encrypted) {
+      validMfa = verifyTotp(code, decryptSecret(user.mfa_secret_encrypted));
+    }
+
+    if (
+      !validMfa &&
+      code.length >= 8 &&
+      Array.isArray(user.recovery_codes_hashes)
+    ) {
+      for (let i = 0; i < user.recovery_codes_hashes.length; i += 1) {
+        if (await verifyPassword(code, user.recovery_codes_hashes[i])) {
+          user.recovery_codes_hashes.splice(i, 1);
+
+          await client.query(
+            "UPDATE users SET recovery_codes_hashes = $1 WHERE id = $2",
+            [user.recovery_codes_hashes, user.id],
+          );
+
+          validMfa = true;
+          usedRecoveryCode = true;
+          break;
+        }
+      }
+    }
+
+    if (!validMfa) {
+      await client.query(
+        `INSERT INTO audit_logs
+          (organization_id, actor_user_id, action, entity_type,
+           entity_id, metadata, ip_address, user_agent)
+         VALUES ($1, $2, 'security.mfa_login_failed', 'user',
+                 $2::text, $3::jsonb, $4::inet, $5)`,
+        [
+          membership.organization_id,
+          user.id,
+          JSON.stringify({
+            method: code.length >= 8 ? "recovery_code" : "authenticator",
+          }),
+          req.ip || null,
+          req.get("user-agent")?.slice(0, 500) || null,
+        ],
+      );
+
+      await client.query("COMMIT");
+
+      return res.status(401).json({
+        message: "That verification code is invalid. Please try again.",
+        code: "MFA_INVALID",
+      });
+    }
+
+    if (usedRecoveryCode) {
+      await client.query(
+        `INSERT INTO audit_logs
+          (organization_id, actor_user_id, action, entity_type,
+           entity_id, metadata)
+         VALUES ($1, $2, 'security.mfa_recovery_code_used',
+                 'user', $2::text, $3::jsonb)`,
+        [
+          membership.organization_id,
+          user.id,
+          JSON.stringify({
+            remainingCodes: user.recovery_codes_hashes.length,
+          }),
+        ],
+      );
+    }
+
+    await client.query(
+      `UPDATE mfa_login_challenges
+       SET consumed_at = NOW()
+       WHERE id = $1`,
+      [challenge.id],
+    );
+
+    await client.query("COMMIT");
+
+    return issueSession(user, membership, req, res);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    return next(error);
+  } finally {
+    client.release();
+  }
+}
 
 export async function acceptInvitation(req, res, next) {
   const client = await pool.connect();
