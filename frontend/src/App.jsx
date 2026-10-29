@@ -6,6 +6,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MfaSetup from "./pages/MfaSetup";
+import MfaVerify from "./pages/MfaVerify";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import Dashboard from "./pages/Dashboard";
 import Contractors from "./pages/Contractors";
@@ -25,9 +26,14 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* MFA verification happens before an authenticated session exists. */}
+      <Route path="/verify-mfa" element={<MfaVerify />} />
+
       <Route element={<ProtectedRoute />}>
         <Route path="/mfa-setup" element={<MfaSetup />} />
         <Route path="/accept-invitation" element={<AcceptInvitation />} />
+
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -40,6 +46,7 @@ export default function App() {
           <Route path="/audit-log" element={<AuditLog />} />
         </Route>
       </Route>
+
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
