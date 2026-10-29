@@ -9,10 +9,12 @@ import {
 import api from "../services/api";
 
 const AuthContext = createContext(null);
+const ACCESS_TOKEN_KEY = "complytrack_access_token";
 
 function presentUser(user) {
   const name =
     user?.fullName || user?.name || user?.email || "ComplyTrack user";
+
   return {
     ...user,
     name,
@@ -28,41 +30,91 @@ function presentUser(user) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(
-    Boolean(sessionStorage.getItem("complytrack_access_token")),
+    Boolean(sessionStorage.getItem(ACCESS_TOKEN_KEY)),
   );
 
   const signOut = useCallback(async () => {
     try {
-      if (sessionStorage.getItem("complytrack_access_token"))
+      if (sessionStorage.getItem(ACCESS_TOKEN_KEY)) {
         await api.post("/auth/logout");
+      }
     } catch {
-      /* Always clear local state even if the API is unavailable. */
+      // Always clear local state even if the API is unavailable.
     }
-    sessionStorage.removeItem("complytrack_access_token");
+
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     setUser(null);
   }, []);
 
   const signIn = useCallback(async (credentials) => {
+    // Do not retain a previous session while starting a new login.
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    setUser(null);
+
     const { data } = await api.post("/auth/login", credentials);
-    if (data.token)
-      sessionStorage.setItem("complytrack_access_token", data.token);
+
+    // An MFA challenge is not an authenticated session.
+    if (data.mfaRequired) {
+      if (!data.challengeToken) {
+        throw new Error(
+          "The server requested MFA but did not provide a verification challenge.",
+        );
+      }
+
+      return {
+        mfaRequired: true,
+        challengeToken: data.challengeToken,
+        email: data.user?.email || credentials.email,
+        expiresIn: data.expiresIn,
+      };
+    }
+
+    if (!data.token || !data.user) {
+      throw new Error("The server did not return a valid login session.");
+    }
+
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, data.token);
+
     const nextUser = presentUser(data.user);
     setUser(nextUser);
+
+    return nextUser;
+  }, []);
+
+  const verifyMfaLogin = useCallback(async ({ challengeToken, code }) => {
+    const { data } = await api.post("/auth/mfa/verify-login", {
+      challengeToken,
+      code,
+    });
+
+    if (!data.token || !data.user) {
+      throw new Error(
+        "MFA verification succeeded without returning a valid session.",
+      );
+    }
+
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, data.token);
+
+    const nextUser = presentUser(data.user);
+    setUser(nextUser);
+
     return nextUser;
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const token = sessionStorage.getItem("complytrack_access_token");
+    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+
     if (!token) {
       setUser(null);
       setLoading(false);
       return;
     }
+
     try {
       const { data } = await api.get("/auth/me");
       setUser(presentUser(data.user));
     } catch {
-      sessionStorage.removeItem("complytrack_access_token");
+      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
       setUser(null);
     } finally {
       setLoading(false);
@@ -72,21 +124,37 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
   useEffect(() => {
     const onExpired = () => {
-      sessionStorage.removeItem("complytrack_access_token");
+      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
       setUser(null);
     };
+
     window.addEventListener("complytrack:session-expired", onExpired);
+
     return () =>
       window.removeEventListener("complytrack:session-expired", onExpired);
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signIn, signOut, refreshUser, setUser }),
-    [user, loading, signIn, signOut, refreshUser],
+    () => ({
+      user,
+      loading,
+      signIn,
+      verifyMfaLogin,
+      signOut,
+      refreshUser,
+      setUser,
+    }),
+    [user, loading, signIn, verifyMfaLogin, signOut, refreshUser],
   );
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
