@@ -23,6 +23,7 @@ router.post("/register", authLimiter, register);
 router.post("/verify-email", authLimiter, verifyEmail);
 router.post("/resend-verification", authLimiter, resendVerification);
 router.post("/login", authLimiter, login);
+router.post("/mfa/verify-login", authLimiter, verifyMfaLogin);
 router.post("/forgot-password", authLimiter, forgotPassword);
 router.post("/reset-password", authLimiter, resetPassword);
 router.get("/me", requireAuth, getCurrentUser);
