@@ -960,12 +960,6 @@ export async function beginMfaEnrollment(req, res, next) {
       [encryptedSecret, req.user.id],
     );
 
-    console.log("[MFA ENROLLMENT SAVE]", {
-      userId: req.user.id,
-      rowsUpdated: result.rowCount,
-      pendingSecretSaved: Boolean(result.rows[0]?.mfa_pending_secret_encrypted),
-    });
-
     if (
       result.rowCount !== 1 ||
       !result.rows[0]?.mfa_pending_secret_encrypted
