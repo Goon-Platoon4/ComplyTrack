@@ -123,73 +123,153 @@ export async function exportAuditCsv(req, res, next) {
   }
 }
 
+
 async function buildAlerts(organizationId) {
-  const contractors = await query(
-    "SELECT id,name FROM contractors WHERE organization_id=$1 ORDER BY name",
-    [organizationId],
-  );
+  // Fetch and calculate compliance for every contractor in one operation.
+  const complianceResults =
+    await refreshOrganizationCompliance(organizationId);
+
   const current = [];
-  for (const contractor of contractors.rows) {
-    const compliance = await refreshContractorSnapshot(
-      organizationId,
-      contractor.id,
-    );
-    for (const issue of compliance?.issues || []) {
+
+  for (const compliance of complianceResults) {
+    for (const issue of compliance.issues) {
       if (issue.status === "Compliant") continue;
+
       current.push({
-        contractorId: contractor.id,
+        contractorId: compliance.contractorId,
         ruleId: issue.ruleId,
         status: issue.status,
         expiryDate: issue.expiryDate || null,
-        signature: `${contractor.id}:${issue.ruleId}:${issue.status}:${issue.expiryDate || "none"}`,
+        signature: `${compliance.contractorId}:${issue.ruleId}:${issue.status}:${issue.expiryDate || "none"}`,
       });
     }
   }
-  const signatures = current.map((item) => item.signature);
-  // Upsert current issues, then resolve absent ones. A later recurrence gets a fresh alert UUID,
-  // so an old per-user dismissal cannot hide a newly recurring compliance problem.
-  for (const item of current) {
-    await query(
-      `INSERT INTO compliance_alerts (organization_id,issue_signature,contractor_id,rule_id,status,expiry_date)
-      VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (organization_id,issue_signature) WHERE resolved_at IS NULL
-      DO UPDATE SET status=EXCLUDED.status,expiry_date=EXCLUDED.expiry_date RETURNING id`,
-      [
-        organizationId,
-        item.signature,
-        item.contractorId,
-        item.ruleId,
-        item.status,
-        item.expiryDate,
-      ],
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Prevent simultaneous alert rebuilds for the same organization.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext('complytrack-alerts'))",
+      [String(organizationId)],
     );
-  }
-  if (signatures.length) {
-    await query(
-      `UPDATE compliance_alerts SET resolved_at=NOW() WHERE organization_id=$1 AND resolved_at IS NULL AND NOT (issue_signature = ANY($2::text[]))`,
-      [organizationId, signatures],
-    );
-  } else {
-    await query(
-      "UPDATE compliance_alerts SET resolved_at=NOW() WHERE organization_id=$1 AND resolved_at IS NULL",
+
+    const signatures = current.map((item) => item.signature);
+
+    // Insert or update all current issues in one database operation.
+    if (current.length) {
+      await client.query(
+        `INSERT INTO compliance_alerts (
+           organization_id,
+           issue_signature,
+           contractor_id,
+           rule_id,
+           status,
+           expiry_date
+         )
+         SELECT
+           $1,
+           items.issue_signature,
+           items.contractor_id,
+           items.rule_id,
+           items.status,
+           items.expiry_date
+         FROM UNNEST(
+           $2::text[],
+           $3::bigint[],
+           $4::uuid[],
+           $5::varchar[],
+           $6::date[]
+         ) AS items(
+           issue_signature,
+           contractor_id,
+           rule_id,
+           status,
+           expiry_date
+         )
+         ON CONFLICT (organization_id, issue_signature)
+           WHERE resolved_at IS NULL
+         DO UPDATE SET
+           status = EXCLUDED.status,
+           expiry_date = EXCLUDED.expiry_date`,
+        [
+          organizationId,
+          current.map((item) => item.signature),
+          current.map((item) => item.contractorId),
+          current.map((item) => item.ruleId),
+          current.map((item) => item.status),
+          current.map((item) => item.expiryDate),
+        ],
+      );
+    }
+
+    // Resolve alerts whose issues are no longer present.
+    if (signatures.length) {
+      await client.query(
+        `UPDATE compliance_alerts
+         SET resolved_at = NOW()
+         WHERE organization_id = $1
+           AND resolved_at IS NULL
+           AND NOT (issue_signature = ANY($2::text[]))`,
+        [organizationId, signatures],
+      );
+    } else {
+      await client.query(
+        `UPDATE compliance_alerts
+         SET resolved_at = NOW()
+         WHERE organization_id = $1
+           AND resolved_at IS NULL`,
+        [organizationId],
+      );
+    }
+
+    // Return the current active alerts.
+    const { rows } = await client.query(
+      `SELECT
+         a.id::text AS key,
+         a.contractor_id AS "contractorId",
+         c.name AS "contractorName",
+         dt.name AS "documentType",
+         a.status,
+         a.expiry_date AS "expiryDate",
+         a.opened_at AS "openedAt"
+       FROM compliance_alerts a
+       JOIN contractors c ON c.id = a.contractor_id
+       JOIN compliance_rules r ON r.id = a.rule_id
+       JOIN document_types dt ON dt.id = r.document_type_id
+       WHERE a.organization_id = $1
+         AND a.resolved_at IS NULL
+       ORDER BY
+         CASE a.status
+           WHEN 'Expired' THEN 1
+           WHEN 'Missing' THEN 2
+           ELSE 3
+         END,
+         a.opened_at DESC`,
       [organizationId],
     );
+
+    await client.query("COMMIT");
+
+    return rows.map((alert) => ({
+      ...alert,
+      message:
+        alert.status === "Missing"
+          ? `${alert.documentType} is required but missing.`
+          : alert.status === "Expired"
+            ? `${alert.documentType} has expired.`
+            : `${alert.documentType} is expiring soon.`,
+    }));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-  const { rows } = await query(
-    `SELECT a.id::text AS key,a.contractor_id AS "contractorId",c.name AS "contractorName",dt.name AS "documentType",a.status,a.expiry_date AS "expiryDate",a.opened_at AS "openedAt"
-    FROM compliance_alerts a JOIN contractors c ON c.id=a.contractor_id JOIN compliance_rules r ON r.id=a.rule_id JOIN document_types dt ON dt.id=r.document_type_id
-    WHERE a.organization_id=$1 AND a.resolved_at IS NULL ORDER BY CASE a.status WHEN 'Expired' THEN 1 WHEN 'Missing' THEN 2 ELSE 3 END,a.opened_at DESC`,
-    [organizationId],
-  );
-  return rows.map((alert) => ({
-    ...alert,
-    message:
-      alert.status === "Missing"
-        ? `${alert.documentType} is required but missing.`
-        : alert.status === "Expired"
-          ? `${alert.documentType} has expired.`
-          : `${alert.documentType} is expiring soon.`,
-  }));
 }
+
 
 export async function getAlerts(req, res, next) {
   try {
