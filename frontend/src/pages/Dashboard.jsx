@@ -104,6 +104,8 @@ const statusMetrics = [
 ];
 
 export default function Dashboard() {
+  const loadPromiseRef = useRef(null);
+
   const [summary, setSummary] = useState(emptySummary);
   const [alerts, setAlerts] = useState([]);
   const [activity, setActivity] = useState([]);
