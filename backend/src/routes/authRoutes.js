@@ -6,6 +6,7 @@ import {
   verifyEmail,
   resendVerification,
   login,
+  verifyMfaLogin,
   logout,
   forgotPassword,
   resetPassword,
