@@ -1,6 +1,6 @@
 import { query, pool } from "../db.js";
 import { recordAudit } from "../services/auditService.js";
-import { refreshContractorSnapshot } from "../services/complianceService.js";
+import { refreshOrganizationCompliance } from "../services/complianceService.js";
 import { toCsv } from "../utils/csv.js";
 import { createTextPdf } from "../services/pdfService.js";
 
