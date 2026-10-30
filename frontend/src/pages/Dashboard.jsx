@@ -114,26 +114,49 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   async function load() {
+    // Reuse an existing request if a dashboard load is already running.
+    if (loadPromiseRef.current) {
+      return loadPromiseRef.current;
+    }
+
     setError("");
-    try {
-      const [summaryResponse, alertResponse, complianceResponse, activityResponse] =
-        await Promise.all([
+
+    const request = (async () => {
+      try {
+        const [
+          summaryResponse,
+          alertResponse,
+          complianceResponse,
+          activityResponse,
+        ] = await Promise.all([
           api.get("/reports/summary"),
           api.get("/operations/alerts"),
           api.get("/reports/compliance"),
           api.get("/operations/audit-logs?limit=5"),
         ]);
-      setSummary(summaryResponse.data);
-      setAlerts(alertResponse.data.items || []);
-      setCoverage(getDocumentCoverage(complianceResponse.data.items || []));
-      setActivity(activityResponse.data || []);
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Could not load live dashboard data.",
-      );
-    } finally {
-      setLoading(false);
-    }
+
+        setSummary(summaryResponse.data);
+        setAlerts(alertResponse.data.items || []);
+        setCoverage(getDocumentCoverage(complianceResponse.data.items || []));
+        setActivity(activityResponse.data || []);
+      } catch (err) {
+        setError(
+          err.response?.data?.message || "Could not load live dashboard data.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    loadPromiseRef.current = request;
+
+    request.finally(() => {
+      if (loadPromiseRef.current === request) {
+        loadPromiseRef.current = null;
+      }
+    });
+
+    return request;
   }
 
   useEffect(() => {
@@ -153,7 +176,9 @@ export default function Dashboard() {
     ...statusMetrics.map(({ key }) => summary[key] || 0),
     1,
   );
-  const expiringAlerts = alerts.filter((alert) => alert.status === "Expiring soon");
+  const expiringAlerts = alerts.filter(
+    (alert) => alert.status === "Expiring soon",
+  );
   const nextExpiry = expiringAlerts
     .map((alert) => alert.expiryDate)
     .filter(Boolean)
@@ -297,7 +322,10 @@ export default function Dashboard() {
           {loading ? (
             <p className="dashboard-empty-state">Loading status summary…</p>
           ) : (
-            <div className="dashboard-status-chart" aria-label="Contractor status counts">
+            <div
+              className="dashboard-status-chart"
+              aria-label="Contractor status counts"
+            >
               {statusMetrics.map(({ key, label, color }) => {
                 const count = summary[key] || 0;
                 return (
@@ -416,7 +444,9 @@ export default function Dashboard() {
           <div className="dashboard-reminder-box">
             <div>
               <strong>
-                {loading ? "Loading reminders…" : `${expiringAlerts.length} expiring documents`}
+                {loading
+                  ? "Loading reminders…"
+                  : `${expiringAlerts.length} expiring documents`}
               </strong>
               <span>
                 {nextExpiry
