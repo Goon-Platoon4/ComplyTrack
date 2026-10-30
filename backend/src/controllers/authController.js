@@ -995,13 +995,6 @@ export async function confirmMfaEnrollment(req, res, next) {
       [req.user.id],
     );
 
-    console.log("[MFA DEBUG]", {
-      userFound: Boolean(rows[0]),
-      pendingSecretExists: Boolean(rows[0]?.mfa_pending_secret_encrypted),
-      codeLength: String(code ?? "").length,
-      codeIsSixDigits: /^\d{6}$/.test(String(code ?? "")),
-    });
-
     if (
       !rows[0]?.mfa_pending_secret_encrypted ||
       !/^\d{6}$/.test(String(code || ""))
