@@ -123,7 +123,7 @@ export async function getContractorCompliance(organizationId, contractorId) {
 }
 
 // Bulk equivalent for organization-wide operations such as dashboard alerts.
-export async function refreshOrganizationCompliance(organizationId) {
+async function performOrganizationComplianceRefresh(organizationId) {
   const { rows } = await query(
     `SELECT
        c.id AS contractor_id,
@@ -211,6 +211,26 @@ export async function refreshOrganizationCompliance(organizationId) {
   }
 
   return results;
+}
+
+export function refreshOrganizationCompliance(organizationId) {
+  const key = String(organizationId);
+
+  const existingRequest = organizationRefreshes.get(key);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = performOrganizationComplianceRefresh(organizationId);
+
+  organizationRefreshes.set(key, request);
+
+  return request.finally(() => {
+    if (organizationRefreshes.get(key) === request) {
+      organizationRefreshes.delete(key);
+    }
+  });
 }
 
 export async function refreshContractorSnapshot(organizationId, contractorId) {
