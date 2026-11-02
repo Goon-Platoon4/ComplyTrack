@@ -1,6 +1,8 @@
 
 import { query } from "../db.js";
 
+const organizationRefreshes = new Map();
+
 // Use the organization's local calendar date for compliance calculations.
 function getOrganizationToday(timezone) {
   const parts = new Intl.DateTimeFormat("en-CA", {
