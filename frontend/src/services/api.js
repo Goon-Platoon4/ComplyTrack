@@ -7,7 +7,10 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("complytrack_access_token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
   // Allow document uploads additional time for storage and malware scanning.
   if (String(config.url || "").includes("/documents/upload")) {
@@ -20,9 +23,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const requestUrl = String(error.config?.url || "");
+
+    const isLoginRequest = requestUrl.includes("/auth/login");
+    const isMfaVerificationRequest = requestUrl.includes(
+      "/auth/mfa/verify-login",
+    );
+
+    // MFA verification happens before an authenticated session exists.
+    // Invalid codes must not trigger the general session-expired handler.
     if (
       error.response?.status === 401 &&
-      !String(error.config?.url || "").includes("/auth/login")
+      !isLoginRequest &&
+      !isMfaVerificationRequest
     ) {
       sessionStorage.removeItem("complytrack_access_token");
       window.dispatchEvent(new CustomEvent("complytrack:session-expired"));

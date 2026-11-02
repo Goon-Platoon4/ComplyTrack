@@ -8,6 +8,7 @@ import {
 import { query, pool } from "../db.js";
 import { createOpaqueToken, hashToken } from "../utils/crypto.js";
 import { sendTransactionalEmail } from "../services/emailService.js";
+import { decryptSecret } from "../utils/secretEncryption.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const PASSWORD_MIN = 12;
@@ -398,163 +399,337 @@ export async function login(req, res, next) {
         ? req.body.email.trim().toLowerCase()
         : "";
     const password = req.body?.password;
-    if (!EMAIL_RE.test(email) || typeof password !== "string")
-      return res
-        .status(400)
-        .json({ message: "Enter your email and password." });
+
+    if (!EMAIL_RE.test(email) || typeof password !== "string") {
+      return res.status(400).json({
+        message: "Enter your email and password.",
+      });
+    }
+
     const { rows } = await query(
-      `SELECT u.* FROM users u WHERE lower(u.email) = $1 AND u.is_active = TRUE LIMIT 1`,
+      `SELECT u.*
+       FROM users u
+       WHERE lower(u.email) = $1 AND u.is_active = TRUE
+       LIMIT 1`,
       [email],
     );
     const user = rows[0];
-      if (user) {
-      // FR-01: 5 failed sign-ins within 15 minutes lock the account for 15
-      // minutes. Failures before the user's last successful sign-in are ignored.
+
+    if (user) {
       const failures = await query(
-        `SELECT COUNT(*)::int AS count, MIN(created_at) AS first_failure, MAX(created_at) AS last_failure
+        `SELECT COUNT(*)::int AS count,
+                MIN(created_at) AS first_failure,
+                MAX(created_at) AS last_failure
          FROM (
-           SELECT created_at FROM audit_logs
-           WHERE actor_user_id = $1 AND action = 'auth.login_failed'
+           SELECT created_at
+           FROM audit_logs
+           WHERE actor_user_id = $1
+             AND action = 'auth.login_failed'
              AND created_at > NOW() - INTERVAL '30 minutes'
-             AND created_at > COALESCE((SELECT MAX(created_at) FROM auth_sessions WHERE user_id = $1), '-infinity')
+             AND created_at > COALESCE(
+               (SELECT MAX(created_at)
+                FROM auth_sessions
+                WHERE user_id = $1),
+               '-infinity'
+             )
            ORDER BY created_at DESC
            LIMIT 5
          ) recent`,
         [user.id],
       );
+
       const { count, first_failure, last_failure } = failures.rows[0];
-      const lockedUntil = last_failure ? new Date(last_failure).getTime() + 15 * 60 * 1000 : 0;
+      const lockedUntil = last_failure
+        ? new Date(last_failure).getTime() + 15 * 60 * 1000
+        : 0;
+
       if (
         count >= 5 &&
         new Date(last_failure) - new Date(first_failure) <= 15 * 60 * 1000 &&
         Date.now() < lockedUntil
       ) {
         await query(
-          `INSERT INTO audit_logs (actor_user_id,action,entity_type,metadata) VALUES ($1,'auth.login_locked','user',$2::jsonb)`,
-          [user.id, JSON.stringify({ lockedUntil: new Date(lockedUntil).toISOString() })],
+          `INSERT INTO audit_logs
+            (actor_user_id, action, entity_type, metadata)
+           VALUES ($1, 'auth.login_locked', 'user', $2::jsonb)`,
+          [
+            user.id,
+            JSON.stringify({
+              lockedUntil: new Date(lockedUntil).toISOString(),
+            }),
+          ],
         );
+
         return res.status(423).json({
-          message: "This account is locked for 15 minutes after 5 failed sign-in attempts.",
+          message:
+            "This account is locked for 15 minutes after 5 failed sign-in attempts.",
         });
       }
     }
+
     const valid = user?.password_hash
       ? await verifyPassword(password, user.password_hash)
       : false;
+
     if (!valid) {
       await query(
-        `INSERT INTO audit_logs (actor_user_id,action,entity_type,metadata) VALUES ($1,'auth.login_failed','user',$2::jsonb)`,
+        `INSERT INTO audit_logs
+          (actor_user_id, action, entity_type, metadata)
+         VALUES ($1, 'auth.login_failed', 'user', $2::jsonb)`,
         [
           user?.id || null,
-          JSON.stringify({ emailDomain: email.split("@")[1] || null }),
+          JSON.stringify({
+            emailDomain: email.split("@")[1] || null,
+          }),
         ],
       );
-      return res.status(401).json({ message: "Invalid email or password." });
+
+      return res.status(401).json({
+        message: "Invalid email or password.",
+      });
     }
-    if (!user.email_verified_at)
-      return res
-        .status(403)
-        .json({ message: "Verify your email before signing in." });
+
+    if (!user.email_verified_at) {
+      return res.status(403).json({
+        message: "Verify your email before signing in.",
+      });
+    }
+
     const requestedOrganization =
       typeof req.body?.organizationId === "string"
         ? req.body.organizationId
         : null;
+
     if (
       requestedOrganization &&
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
         requestedOrganization,
       )
-    )
-      return res
-        .status(400)
-        .json({ message: "Organization selection is invalid." });
+    ) {
+      return res.status(400).json({
+        message: "Organization selection is invalid.",
+      });
+    }
+
     const memberships = await query(
-      `SELECT m.organization_id,m.role,o.status FROM organization_memberships m JOIN organizations o ON o.id=m.organization_id WHERE m.user_id=$1 AND m.status='active' AND o.status='active' AND ($2::uuid IS NULL OR m.organization_id=$2::uuid) ORDER BY m.created_at`,
+      `SELECT m.organization_id, m.role, o.status
+       FROM organization_memberships m
+       JOIN organizations o ON o.id = m.organization_id
+       WHERE m.user_id = $1
+         AND m.status = 'active'
+         AND o.status = 'active'
+         AND ($2::uuid IS NULL OR m.organization_id = $2::uuid)
+       ORDER BY m.created_at`,
       [user.id, requestedOrganization],
     );
-    if (!memberships.rowCount)
+
+    if (!memberships.rowCount) {
       return res.status(403).json({
         message: "No active organization access is available for this account.",
       });
-    const membership = memberships.rows[0];
-    if (membership.role === "Administrator" && user.mfa_enabled) {
-      const code = String(req.body?.mfaCode || "");
-      let validMfa = false;
-      if (/^\d{6}$/.test(code) && user.mfa_secret_encrypted) {
-        const { decryptSecret } = await import("../utils/secretEncryption.js");
-        validMfa = verifyTotp(code, decryptSecret(user.mfa_secret_encrypted));
-      }
-      if (
-        !validMfa &&
-        code.length >= 8 &&
-        Array.isArray(user.recovery_codes_hashes)
-      ) {
-        for (let i = 0; i < user.recovery_codes_hashes.length; i += 1) {
-          if (await verifyPassword(code, user.recovery_codes_hashes[i])) {
-            user.recovery_codes_hashes.splice(i, 1);
-            await query(
-              "UPDATE users SET recovery_codes_hashes=$1 WHERE id=$2",
-              [user.recovery_codes_hashes, user.id],
-            );
-            validMfa = true;
-            await query(
-              `INSERT INTO audit_logs (organization_id,actor_user_id,action,entity_type,entity_id,metadata) VALUES ($1,$2,'security.mfa_recovery_code_used','user',$2,$3::jsonb)`,
-              [
-                membership.organization_id,
-                user.id,
-                JSON.stringify({
-                  remainingCodes: user.recovery_codes_hashes.length,
-                }),
-              ],
-            );
-            break;
-          }
-        }
-      }
-      if (!validMfa) {
-        await query(
-          `INSERT INTO audit_logs (
-    organization_id,
-    actor_user_id,
-    action,
-    entity_type,
-    entity_id,
-    metadata,
-    ip_address,
-    user_agent
-  )
-  VALUES (
-    $1::uuid,
-    $2::uuid,
-    'security.mfa_login_failed',
-    'user',
-    $3::text,
-    $4::jsonb,
-    $5::inet,
-    $6::text
-  )`,
-          [
-            membership.organization_id,
-            user.id,
-            String(user.id),
-            JSON.stringify({
-              method: code.length >= 8 ? "recovery_code" : "authenticator",
-            }),
-            req.ip || null,
-            req.get("user-agent")?.slice(0, 500) || null,
-          ],
-        );
-        return res.status(401).json({
-          message:
-            "A valid authenticator code or unused recovery code is required.",
-          code: "MFA_REQUIRED",
-        });
-      }
     }
-    // Administrators without MFA receive a restricted session only for enrollment/confirmation endpoints.
+
+    const membership = memberships.rows[0];
+
+    // MFA-enabled administrators must verify before receiving a session.
+    if (membership.role === "Administrator" && user.mfa_enabled) {
+      const challengeToken = createOpaqueToken(32);
+
+      await query(
+        `INSERT INTO mfa_login_challenges
+          (user_id, organization_id, token_hash, expires_at)
+         VALUES ($1, $2, $3, NOW() + INTERVAL '5 minutes')`,
+        [user.id, membership.organization_id, hashToken(challengeToken)],
+      );
+
+      return res.json({
+        mfaRequired: true,
+        challengeToken,
+        expiresIn: 300,
+        user: {
+          email: user.email,
+        },
+      });
+    }
+
+    // Create the normal session only when MFA is not required.
     return issueSession(user, membership, req, res);
   } catch (error) {
     return next(error);
+  }
+}
+
+export async function verifyMfaLogin(req, res, next) {
+  const client = await pool.connect();
+
+  try {
+    const { challengeToken, code } = req.body || {};
+
+    if (
+      typeof challengeToken !== "string" ||
+      typeof code !== "string" ||
+      challengeToken.length < 20 ||
+      code.length < 6 ||
+      code.length > 128
+    ) {
+      return res.status(400).json({
+        message: "Enter your authenticator or recovery code.",
+      });
+    }
+
+    await client.query("BEGIN");
+
+    const challengeResult = await client.query(
+      `SELECT id, user_id, organization_id
+       FROM mfa_login_challenges
+       WHERE token_hash = $1
+         AND consumed_at IS NULL
+         AND expires_at > NOW()
+       FOR UPDATE`,
+      [hashToken(challengeToken)],
+    );
+
+    if (!challengeResult.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "Your verification session has expired. Please sign in again.",
+        code: "MFA_CHALLENGE_EXPIRED",
+      });
+    }
+
+    const challenge = challengeResult.rows[0];
+
+    const userResult = await client.query(
+      `SELECT *
+       FROM users
+       WHERE id = $1
+         AND is_active = TRUE
+         AND email_verified_at IS NOT NULL
+       FOR UPDATE`,
+      [challenge.user_id],
+    );
+
+    if (!userResult.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "This account cannot complete verification. Please sign in again.",
+        code: "MFA_CHALLENGE_INVALID",
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    const membershipResult = await client.query(
+      `SELECT m.organization_id, m.role
+       FROM organization_memberships m
+       JOIN organizations o ON o.id = m.organization_id
+       WHERE m.user_id = $1
+         AND m.organization_id = $2
+         AND m.status = 'active'
+         AND o.status = 'active'
+       FOR UPDATE OF m`,
+      [user.id, challenge.organization_id],
+    );
+
+    if (
+      !membershipResult.rowCount ||
+      membershipResult.rows[0].role !== "Administrator" ||
+      !user.mfa_enabled
+    ) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({
+        message: "MFA verification is no longer available for this account.",
+        code: "MFA_CHALLENGE_INVALID",
+      });
+    }
+
+    const membership = membershipResult.rows[0];
+    let validMfa = false;
+    let usedRecoveryCode = false;
+
+    if (/^\d{6}$/.test(code) && user.mfa_secret_encrypted) {
+      validMfa = verifyTotp(code, decryptSecret(user.mfa_secret_encrypted));
+    }
+
+    if (
+      !validMfa &&
+      code.length >= 8 &&
+      Array.isArray(user.recovery_codes_hashes)
+    ) {
+      for (let i = 0; i < user.recovery_codes_hashes.length; i += 1) {
+        if (await verifyPassword(code, user.recovery_codes_hashes[i])) {
+          user.recovery_codes_hashes.splice(i, 1);
+
+          await client.query(
+            "UPDATE users SET recovery_codes_hashes = $1 WHERE id = $2",
+            [user.recovery_codes_hashes, user.id],
+          );
+
+          validMfa = true;
+          usedRecoveryCode = true;
+          break;
+        }
+      }
+    }
+
+    if (!validMfa) {
+      await client.query(
+        `INSERT INTO audit_logs
+          (organization_id, actor_user_id, action, entity_type,
+           entity_id, metadata, ip_address, user_agent)
+         VALUES ($1, $2, 'security.mfa_login_failed', 'user',
+                 $2::text, $3::jsonb, $4::inet, $5)`,
+        [
+          membership.organization_id,
+          user.id,
+          JSON.stringify({
+            method: code.length >= 8 ? "recovery_code" : "authenticator",
+          }),
+          req.ip || null,
+          req.get("user-agent")?.slice(0, 500) || null,
+        ],
+      );
+
+      await client.query("COMMIT");
+
+      return res.status(401).json({
+        message: "That verification code is invalid. Please try again.",
+        code: "MFA_INVALID",
+      });
+    }
+
+    if (usedRecoveryCode) {
+      await client.query(
+        `INSERT INTO audit_logs
+          (organization_id, actor_user_id, action, entity_type,
+           entity_id, metadata)
+         VALUES ($1, $2, 'security.mfa_recovery_code_used',
+                 'user', $2::text, $3::jsonb)`,
+        [
+          membership.organization_id,
+          user.id,
+          JSON.stringify({
+            remainingCodes: user.recovery_codes_hashes.length,
+          }),
+        ],
+      );
+    }
+
+    await client.query(
+      `UPDATE mfa_login_challenges
+       SET consumed_at = NOW()
+       WHERE id = $1`,
+      [challenge.id],
+    );
+
+    await client.query("COMMIT");
+
+    return issueSession(user, membership, req, res);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    return next(error);
+  } finally {
+    client.release();
   }
 }
 
@@ -785,12 +960,6 @@ export async function beginMfaEnrollment(req, res, next) {
       [encryptedSecret, req.user.id],
     );
 
-    console.log("[MFA ENROLLMENT SAVE]", {
-      userId: req.user.id,
-      rowsUpdated: result.rowCount,
-      pendingSecretSaved: Boolean(result.rows[0]?.mfa_pending_secret_encrypted),
-    });
-
     if (
       result.rowCount !== 1 ||
       !result.rows[0]?.mfa_pending_secret_encrypted
@@ -825,13 +994,6 @@ export async function confirmMfaEnrollment(req, res, next) {
       "SELECT mfa_pending_secret_encrypted FROM users WHERE id=$1",
       [req.user.id],
     );
-
-    console.log("[MFA DEBUG]", {
-      userFound: Boolean(rows[0]),
-      pendingSecretExists: Boolean(rows[0]?.mfa_pending_secret_encrypted),
-      codeLength: String(code ?? "").length,
-      codeIsSixDigits: /^\d{6}$/.test(String(code ?? "")),
-    });
 
     if (
       !rows[0]?.mfa_pending_secret_encrypted ||

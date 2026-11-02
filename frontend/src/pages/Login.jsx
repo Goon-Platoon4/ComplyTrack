@@ -7,7 +7,6 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,24 +21,37 @@ export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: "", password: "", mfaCode: "" });
-  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState(location.state?.message || "");
   const [busy, setBusy] = useState(false);
-  const [needsMfa, setNeedsMfa] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
     setError("");
     setBusy(true);
+
     try {
-      const user = await signIn({
-        email: form.email,
+      const result = await signIn({
+        email: form.email.trim(),
         password: form.password,
-        ...(form.mfaCode ? { mfaCode: form.mfaCode } : {}),
       });
+
+      if (result.mfaRequired) {
+        navigate("/verify-mfa", {
+          replace: true,
+          state: {
+            challengeToken: result.challengeToken,
+            email: result.email,
+            from: location.state?.from,
+          },
+        });
+        return;
+      }
+
       navigate(
-        user.role === "Administrator" && !user.mfaEnabled
+        result.role === "Administrator" && !result.mfaEnabled
           ? "/mfa-setup"
           : location.state?.from
             ? `${location.state.from.pathname || "/dashboard"}${location.state.from.search || ""}`
@@ -47,12 +59,9 @@ export default function Login() {
         { replace: true },
       );
     } catch (err) {
-      const data = err.response?.data;
-      if (data?.code === "MFA_REQUIRED") {
-        setNeedsMfa(true);
-      }
       setError(
-        data?.message ||
+        err.response?.data?.message ||
+          err.message ||
           "Unable to sign in. Check your connection and try again.",
       );
     } finally {
@@ -65,15 +74,16 @@ export default function Login() {
       <div className="comply-login-card">
         <section className="comply-login-intro">
           <div className="comply-login-curve" aria-hidden="true" />
+
           <div className="comply-login-intro-content">
             <img
               src="/logo.webp"
               alt="ComplyTrack"
               className="comply-login-logo"
             />
-            <h1>
-              Secure access to the contractor compliance workspace.
-            </h1>
+
+            <h1>Secure access to the contractor compliance workspace.</h1>
+
             <div className="comply-login-features">
               {features.map((feature, index) => (
                 <div
@@ -87,6 +97,7 @@ export default function Login() {
               ))}
             </div>
           </div>
+
           <p className="comply-login-footer">
             Built for South African organisations by South African developers
           </p>
@@ -96,6 +107,7 @@ export default function Login() {
           <div className="comply-login-mobile-logo">
             <img src="/logo.webp" alt="ComplyTrack" />
           </div>
+
           <div className="comply-login-form-content">
             <h2>Sign in</h2>
             <p className="comply-login-subtitle">
@@ -144,7 +156,9 @@ export default function Login() {
                     type="button"
                     className="comply-login-password-toggle"
                     onClick={() => setShowPassword((visible) => !visible)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     aria-pressed={showPassword}
                   >
                     {showPassword ? (
@@ -155,24 +169,6 @@ export default function Login() {
                   </button>
                 </span>
               </label>
-
-              {needsMfa && (
-                <label className="comply-login-field">
-                  <span>Authenticator or recovery code</span>
-                  <span className="comply-login-input-wrap">
-                    <ShieldCheck size={18} aria-hidden="true" />
-                    <input
-                      autoComplete="one-time-code"
-                      placeholder="Enter your verification code"
-                      required
-                      value={form.mfaCode}
-                      onChange={(event) =>
-                        setForm({ ...form, mfaCode: event.target.value })
-                      }
-                    />
-                  </span>
-                </label>
-              )}
 
               <div className="comply-login-options">
                 <label>
@@ -194,8 +190,7 @@ export default function Login() {
             </form>
 
             <p className="comply-login-signup">
-              Don&apos;t have an account?{" "}
-              <Link to="/signup">Sign up</Link>
+              Don&apos;t have an account? <Link to="/signup">Sign up</Link>
             </p>
           </div>
         </section>
