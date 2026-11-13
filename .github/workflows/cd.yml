@@ -1,0 +1,75 @@
+
+name: ComplyTrack CD - Production Verification
+
+on:
+  workflow_run:
+    workflows: ["ComplyTrack CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    name: Verify Production Deployment
+    runs-on: ubuntu-latest
+
+    # Only verify after CI succeeds.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
+
+    steps:
+      - name: Verify frontend
+        run: |
+          echo "Checking ComplyTrack frontend..."
+
+          curl --fail --silent --show-error --location \
+            --retry 20 \
+            --retry-delay 15 \
+            --retry-all-errors \
+            --max-time 20 \
+            https://complytrack-frontend.vercel.app/
+
+          echo "Frontend is responding successfully."
+
+      - name: Verify backend liveness
+        run: |
+          echo "Checking backend liveness..."
+
+          curl --fail --silent --show-error \
+            --retry 20 \
+            --retry-delay 15 \
+            --retry-all-errors \
+            --max-time 20 \
+            https://complytrack-api.vercel.app/api/health/live
+
+          echo "Backend liveness check passed."
+
+      - name: Verify backend readiness
+        run: |
+          echo "Checking backend readiness..."
+
+          curl --fail --silent --show-error \
+            --retry 20 \
+            --retry-delay 15 \
+            --retry-all-errors \
+            --max-time 20 \
+            https://complytrack-api.vercel.app/api/health/ready
+
+          echo "Backend readiness check passed."
+
+      - name: Deployment verification summary
+        if: success()
+        run: |
+          echo "ComplyTrack production deployment verified!"
+          echo "Frontend: Online"
+          echo "Backend: Online"
+          echo "Backend readiness: Passed"
